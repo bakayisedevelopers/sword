@@ -1,15 +1,16 @@
 # SSMI Website
 
-This folder is now the public-facing Vite + React site for the church.
+This folder is the public-facing Vite + React site for the church.
 
-## What this folder contains
+## What it contains
 
-- `src/app/churchBlueprint.js`: the shared content map derived from `flutter-website/lib/index.dart`.
-- `src/components/layout`: header and footer shells for the public site.
-- `src/components/ui`: reusable cards and presentation helpers.
-- `src/pages/HomePage.jsx`: the first React landing page and route-structure overview.
+- `src/app/churchBlueprint.js`: a thin re-export of the shared church blueprint from `functions`.
+- `src/routes/siteRoutes.js`: the route registry used by React Router.
+- `src/components/layout`: shared header and footer shells.
+- `src/components/ui`: reusable route cards.
+- `src/pages`: the home screen, generic route page, and 404 page.
 
-## How the Flutter app maps over
+## FlutterFlow mapping
 
 - **Public pages**: Home, About Us, Locations, Watch, Care, Give, Contact Us, Privacy Policy.
 - **Ministry pages**: Prayer, Counseling, Ministries, Partner, Be a Partner, Baptism, Fellowship, Follow Jesus, Youth, Welfare, Couples, For Men, For Women, Young Adults, Singles, School of Ministry, Super Kids.
@@ -25,8 +26,7 @@ npm install
 npm run dev
 ```
 
-## Next steps
+## Validation
 
-1. Add `react-router-dom` and turn the blueprint into real routes.
-2. Move page-specific content into JSON or CMS-backed modules.
-3. Rebuild the top public pages one by one using the shared `siteGroups` data.
+- `npm run build` passes for the current scaffold.
+- Routes are generated from the shared blueprint rather than hand-maintained one by one.

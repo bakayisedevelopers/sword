@@ -1,17 +1,24 @@
 # Shared Functions
 
-This folder is reserved for common, app-agnostic helpers that can be reused by the public
-website, the admin app, and any future backend or Firebase code.
-
-## Planned contents
-
-- String and slug helpers
-- Shared church route and content blueprints
-- Validation and formatting utilities
-- Any reusable server-side or build-time logic
+This folder holds the common helpers and content blueprint used by the website and admin app.
 
 ## Current exports
 
 - `slugify`
 - `titleCase`
-- `buildChurchBlueprint`
+- `churchBrand`
+- `primaryNavigation`
+- `publicContentGroups`
+- `publicRoutes`
+- `adminSections`
+- `adminMetrics`
+- `buildRouteHighlights`
+- `buildRouteChecklist`
+- `buildRouteSubtitle`
+- `findRouteBySlug`
+- `getRelatedRoutes`
+
+## Why it exists
+
+The public website and the admin dashboard should not drift apart. Keeping the route/content
+blueprint in one place makes it easier to keep the FlutterFlow migration organized and consistent.

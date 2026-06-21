@@ -1,4 +1,5 @@
-import { heroStats, siteGroups } from '../app/churchBlueprint';
+import { Link } from 'react-router-dom';
+import { heroStats, primaryNavigation, siteGroups } from '../app/churchBlueprint';
 import SectionCard from '../components/ui/SectionCard';
 
 export default function HomePage() {
@@ -16,18 +17,18 @@ export default function HomePage() {
             ownership.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <a
-              href="/about-us"
+            <Link
+              to="/about-us"
               className="rounded-full bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-navy transition hover:opacity-95"
             >
               See the routes
-            </a>
-            <a
-              href="/contact-us"
+            </Link>
+            <Link
+              to="/contact-us"
               className="rounded-full border border-white/30 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
             >
               Continue to contact
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -67,7 +68,7 @@ export default function HomePage() {
 
         <div className="space-y-8">
           {siteGroups.map((group) => (
-            <section key={group.title}>
+            <section key={group.key}>
               <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                 <div>
                   <h3 className="text-2xl font-bold text-brand-navy">{group.title}</h3>
@@ -79,7 +80,14 @@ export default function HomePage() {
               </div>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {group.items.map((item) => (
-                  <SectionCard key={item.slug} title={item.title} slug={item.slug} note={item.note} />
+                  <SectionCard
+                    key={item.slug}
+                    title={item.title}
+                    slug={item.slug}
+                    note={item.note}
+                    action={item.action}
+                    groupTitle={group.title}
+                  />
                 ))}
               </div>
             </section>

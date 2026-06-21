@@ -1,4 +1,5 @@
-import { brand, siteGroups } from '../../app/churchBlueprint';
+import { Link } from 'react-router-dom';
+import { brand, primaryNavigation, publicContentGroups } from '../../app/churchBlueprint';
 
 export default function SiteFooter() {
   return (
@@ -11,13 +12,24 @@ export default function SiteFooter() {
             This React structure mirrors the FlutterFlow content model and gives us a clean place
             to add route pages, reusable components, and shared data.
           </p>
+          <div className="flex flex-wrap gap-2 pt-2">
+            {primaryNavigation.slice(0, 4).map((item) => (
+              <Link
+                key={item.slug}
+                to={item.slug}
+                className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-brand-gold hover:text-brand-gold"
+              >
+                {item.title}
+              </Link>
+            ))}
+          </div>
         </div>
         <div>
           <p className="text-sm font-semibold text-brand-navy">Tracked groups</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {siteGroups.map((group) => (
+            {publicContentGroups.map((group) => (
               <span
-                key={group.title}
+                key={group.key}
                 className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600"
               >
                 {group.title}
