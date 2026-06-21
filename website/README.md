@@ -1,43 +1,32 @@
-# SSMI Website Redesign (Vite + React + Tailwind)
+# SSMI Website
 
-## What was analyzed from the current Flutter codebase
+This folder is now the public-facing Vite + React site for the church.
 
-- **Navigation and IA**: `lib/index.dart` exports a broad set of pages (home, branches, ministries, care actions, resources, conferences), which suggests a content-heavy church portal rather than a simple landing page.
-- **Design tokens**: `lib/flutter_flow/flutter_flow_theme.dart` defines a light scheme with key brand colors:
-  - `secondary` / `primaryText`: `#192431` (deep navy)
-  - `tertiary` / `alternate`: `#C97303` (gold accent)
-  - `primary` / `secondaryBackground`: `#FFFFFF`
-- **Homepage direction**: `lib/main_pages/home/home_widget.dart` uses a hero card, ministry/event pathways, and responsive desktop/mobile blocks.
+## What this folder contains
 
-## Redesign approach implemented
+- `src/app/churchBlueprint.js`: the shared content map derived from `flutter-website/lib/index.dart`.
+- `src/components/layout`: header and footer shells for the public site.
+- `src/components/ui`: reusable cards and presentation helpers.
+- `src/pages/HomePage.jsx`: the first React landing page and route-structure overview.
 
-This folder contains a fresh **Vite + React + Tailwind** front-end concept that:
+## How the Flutter app maps over
 
-1. Preserves the original content model (home, ministries, branches, giving/watch calls-to-action).
-2. Applies a modern card/grid pattern with stronger visual hierarchy.
-3. Uses the same core brand colors from Flutter in `tailwind.config.js`.
-4. Is ready for incremental migration (you can split sections into route-based pages next).
-5. Avoids binary assets in the redesign package to keep PR tooling compatible.
+- **Public pages**: Home, About Us, Locations, Watch, Care, Give, Contact Us, Privacy Policy.
+- **Ministry pages**: Prayer, Counseling, Ministries, Partner, Be a Partner, Baptism, Fellowship, Follow Jesus, Youth, Welfare, Couples, For Men, For Women, Young Adults, Singles, School of Ministry, Super Kids.
+- **Branch pages**: Boksburg, E Malahleni, Hlutsi, Lagos, Ludzeludze, Mbabane, Online, Orange Farm, Siteki.
+- **Events and campaigns**: Events, Register, Camp Yolo, Fire Conference, Superman Conference, Branch Template, Youth Template, Socials.
+- **Resources and giving**: E Resources Center, Podcasts, Branch Give, Beyond Tithe.
 
 ## Run locally
 
 ```bash
-cd web-redesign
+cd website
 npm install
 npm run dev
 ```
 
-## Build
+## Next steps
 
-```bash
-npm run build
-npm run preview
-```
-
-## Next migration steps
-
-- Add `react-router-dom` and break sections into routes that mirror current Flutter pages.
-- Move shared data (ministries, branches, events) into JSON/API layer.
-- Rebuild forms (Prayer, Partnership, Contact) as controlled React form components.
-- Connect Firebase client SDK if parity with current backend is required.
-- Add an image/content pipeline (CDN or CMS) after PR system constraints are addressed.
+1. Add `react-router-dom` and turn the blueprint into real routes.
+2. Move page-specific content into JSON or CMS-backed modules.
+3. Rebuild the top public pages one by one using the shared `siteGroups` data.
