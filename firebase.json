@@ -1,0 +1,47 @@
+{
+  "hosting": [
+    {
+      "target": "website",
+      "public": "website/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "target": "admin",
+      "public": "admin/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "functions"
+    }
+  ],
+  "firestore": {
+    "rules": "flutter-website/firebase/firestore.rules",
+    "indexes": "flutter-website/firebase/firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "flutter-website/firebase/storage.rules"
+  }
+}

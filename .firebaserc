@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "default": "sword-website-f959c532"
+  },
+  "targets": {
+    "sword-website-f959c532": {
+      "hosting": {
+        "website": [
+          "sword-website-f959c532"
+        ],
+        "admin": [
+          "sword-admin"
+        ]
+      }
+    }
+  }
+}
