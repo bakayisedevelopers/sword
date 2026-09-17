@@ -199,7 +199,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         ),
         FFRoute(
           name: EMalahleniWidget.routeName,
-          path: EMalahleniWidget.routePath,
+          path: '/legacy/emalahleni',
           builder: (context, params) => EMalahleniWidget(),
         ),
         FFRoute(
@@ -216,42 +216,42 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         ),
         FFRoute(
           name: LudzeludzeWidget.routeName,
-          path: LudzeludzeWidget.routePath,
+          path: '/legacy/ludzeludze',
           builder: (context, params) => LudzeludzeWidget(),
         ),
         FFRoute(
           name: HlutsiWidget.routeName,
-          path: HlutsiWidget.routePath,
+          path: '/legacy/hlutsi',
           builder: (context, params) => HlutsiWidget(),
         ),
         FFRoute(
           name: LagosWidget.routeName,
-          path: LagosWidget.routePath,
+          path: '/legacy/lagos',
           builder: (context, params) => LagosWidget(),
         ),
         FFRoute(
           name: SitekiWidget.routeName,
-          path: SitekiWidget.routePath,
+          path: '/legacy/siteki',
           builder: (context, params) => SitekiWidget(),
         ),
         FFRoute(
           name: OrangeFarmWidget.routeName,
-          path: OrangeFarmWidget.routePath,
+          path: '/legacy/orange-farm',
           builder: (context, params) => OrangeFarmWidget(),
         ),
         FFRoute(
           name: BoksburgWidget.routeName,
-          path: BoksburgWidget.routePath,
+          path: '/legacy/boksburg',
           builder: (context, params) => BoksburgWidget(),
         ),
         FFRoute(
           name: OnlineWidget.routeName,
-          path: OnlineWidget.routePath,
+          path: '/legacy/online',
           builder: (context, params) => OnlineWidget(),
         ),
         FFRoute(
           name: MbabaneWidget.routeName,
-          path: MbabaneWidget.routePath,
+          path: '/legacy/mbabane',
           builder: (context, params) => MbabaneWidget(),
         ),
         FFRoute(
@@ -367,11 +367,6 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, params) => SinglesWidget(),
         ),
         FFRoute(
-          name: BranchTemplateWidget.routeName,
-          path: BranchTemplateWidget.routePath,
-          builder: (context, params) => BranchTemplateWidget(),
-        ),
-        FFRoute(
           name: YouthTemplateWidget.routeName,
           path: YouthTemplateWidget.routePath,
           builder: (context, params) => YouthTemplateWidget(),
@@ -380,6 +375,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: SocialsWidget.routeName,
           path: SocialsWidget.routePath,
           builder: (context, params) => SocialsWidget(),
+        ),
+        FFRoute(
+          name: BranchTemplateWidget.routeName,
+          path: BranchTemplateWidget.routePath,
+          builder: (context, params) => BranchTemplateWidget(
+            branchSlug: params.getParam(
+              'branchSlug',
+              ParamType.String,
+            ),
+          ),
         )
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
       observers: [routeObserver],

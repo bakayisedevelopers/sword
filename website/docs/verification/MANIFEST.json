@@ -1,0 +1,253 @@
+{
+  "generatedAt": "2026-09-15T13:39:06.167Z",
+  "generator": "scripts/capture-authentic-screenshots.mjs",
+  "task": "QA-01-T2",
+  "milestone": "GM-07",
+  "totalScreenshots": 16,
+  "uniqueChecksums": 16,
+  "allUnique": true,
+  "viewports": [
+    {
+      "id": "VP-01",
+      "prefix": "375",
+      "name": "Mobile Narrow",
+      "width": 375,
+      "height": 812,
+      "mobile": true
+    },
+    {
+      "id": "VP-02",
+      "prefix": "478",
+      "name": "Mobile Breakpoint End",
+      "width": 478,
+      "height": 844,
+      "mobile": true
+    },
+    {
+      "id": "VP-03",
+      "prefix": "479",
+      "name": "Mobile Breakpoint Start",
+      "width": 479,
+      "height": 844,
+      "mobile": true
+    },
+    {
+      "id": "VP-04",
+      "prefix": "767",
+      "name": "Tablet Portrait",
+      "width": 767,
+      "height": 1024,
+      "mobile": true
+    },
+    {
+      "id": "VP-05",
+      "prefix": "990",
+      "name": "Tablet Landscape End",
+      "width": 990,
+      "height": 900,
+      "mobile": false
+    },
+    {
+      "id": "VP-06",
+      "prefix": "991",
+      "name": "Desktop Breakpoint Start",
+      "width": 991,
+      "height": 900,
+      "mobile": false
+    },
+    {
+      "id": "VP-07",
+      "prefix": "1280",
+      "name": "Desktop Standard",
+      "width": 1280,
+      "height": 900,
+      "mobile": false
+    },
+    {
+      "id": "VP-08",
+      "prefix": "1440",
+      "name": "Desktop Large",
+      "width": 1440,
+      "height": 900,
+      "mobile": false
+    }
+  ],
+  "screenshots": [
+    {
+      "viewportId": "VP-01",
+      "viewportName": "Mobile Narrow",
+      "width": 375,
+      "height": 812,
+      "surface": "Flutter Reference",
+      "filename": "375-flutter.png",
+      "relativePath": "website/docs/verification/screenshots/375-flutter.png",
+      "sizeBytes": 100707,
+      "sha256": "4f057cc6b4f62f0b74d8665c19419bf268c9da46bc1c5549280771f7b95c78d2"
+    },
+    {
+      "viewportId": "VP-01",
+      "viewportName": "Mobile Narrow",
+      "width": 375,
+      "height": 812,
+      "surface": "React Conversion",
+      "filename": "375-react.png",
+      "relativePath": "website/docs/verification/screenshots/375-react.png",
+      "sizeBytes": 176330,
+      "sha256": "c2a38268e89ccad33294ed2bc3ea4369fc6c4b57f498e83fa344ba38e1f24599"
+    },
+    {
+      "viewportId": "VP-02",
+      "viewportName": "Mobile Breakpoint End",
+      "width": 478,
+      "height": 844,
+      "surface": "Flutter Reference",
+      "filename": "478-flutter.png",
+      "relativePath": "website/docs/verification/screenshots/478-flutter.png",
+      "sizeBytes": 103945,
+      "sha256": "b1a15ae4b096d30c356f2998ed242a99b03ecfd3fa47cfd2e2a3f36032e6e58d"
+    },
+    {
+      "viewportId": "VP-02",
+      "viewportName": "Mobile Breakpoint End",
+      "width": 478,
+      "height": 844,
+      "surface": "React Conversion",
+      "filename": "478-react.png",
+      "relativePath": "website/docs/verification/screenshots/478-react.png",
+      "sizeBytes": 213978,
+      "sha256": "24facc9648704e506049b99122f0662abbeb78c942b87b7b0a6f2c2e9439a1f8"
+    },
+    {
+      "viewportId": "VP-03",
+      "viewportName": "Mobile Breakpoint Start",
+      "width": 479,
+      "height": 844,
+      "surface": "Flutter Reference",
+      "filename": "479-flutter.png",
+      "relativePath": "website/docs/verification/screenshots/479-flutter.png",
+      "sizeBytes": 103481,
+      "sha256": "efa9723efe2eca8bfa59f4466846ebf5866fbb3f24b267062289e84677c79e0b"
+    },
+    {
+      "viewportId": "VP-03",
+      "viewportName": "Mobile Breakpoint Start",
+      "width": 479,
+      "height": 844,
+      "surface": "React Conversion",
+      "filename": "479-react.png",
+      "relativePath": "website/docs/verification/screenshots/479-react.png",
+      "sizeBytes": 213092,
+      "sha256": "2faf0d1999bb800a9548d53f6821a0717208d279c0a877b4b04148bdd40d9b10"
+    },
+    {
+      "viewportId": "VP-04",
+      "viewportName": "Tablet Portrait",
+      "width": 767,
+      "height": 1024,
+      "surface": "Flutter Reference",
+      "filename": "767-flutter.png",
+      "relativePath": "website/docs/verification/screenshots/767-flutter.png",
+      "sizeBytes": 161752,
+      "sha256": "82b3cd62ace30fa9bb0f9ab2cd9a9aa5d5e2d779fe02fd0141d245398d51735c"
+    },
+    {
+      "viewportId": "VP-04",
+      "viewportName": "Tablet Portrait",
+      "width": 767,
+      "height": 1024,
+      "surface": "React Conversion",
+      "filename": "767-react.png",
+      "relativePath": "website/docs/verification/screenshots/767-react.png",
+      "sizeBytes": 428158,
+      "sha256": "cb339d6e8316f5167a3d947bdcb49c3c7e54ff748520306de56cb43a25e7ef7a"
+    },
+    {
+      "viewportId": "VP-05",
+      "viewportName": "Tablet Landscape End",
+      "width": 990,
+      "height": 900,
+      "surface": "Flutter Reference",
+      "filename": "990-flutter.png",
+      "relativePath": "website/docs/verification/screenshots/990-flutter.png",
+      "sizeBytes": 205768,
+      "sha256": "f61a5b13e3a5e7113a5b407da5125e6ec1086a51f3dbef4635692d8581cdee61"
+    },
+    {
+      "viewportId": "VP-05",
+      "viewportName": "Tablet Landscape End",
+      "width": 990,
+      "height": 900,
+      "surface": "React Conversion",
+      "filename": "990-react.png",
+      "relativePath": "website/docs/verification/screenshots/990-react.png",
+      "sizeBytes": 313608,
+      "sha256": "bd230e98d5ef73101273aa749ff6e59ed5abb8e32b459311315f59d1b9b73f56"
+    },
+    {
+      "viewportId": "VP-06",
+      "viewportName": "Desktop Breakpoint Start",
+      "width": 991,
+      "height": 900,
+      "surface": "Flutter Reference",
+      "filename": "991-flutter.png",
+      "relativePath": "website/docs/verification/screenshots/991-flutter.png",
+      "sizeBytes": 204110,
+      "sha256": "77dca042add7cef8ca5366dd4c4a56acf2d1a06031c2b9370f97acd234338339"
+    },
+    {
+      "viewportId": "VP-06",
+      "viewportName": "Desktop Breakpoint Start",
+      "width": 991,
+      "height": 900,
+      "surface": "React Conversion",
+      "filename": "991-react.png",
+      "relativePath": "website/docs/verification/screenshots/991-react.png",
+      "sizeBytes": 361949,
+      "sha256": "6d4c632fe59c6189523a2e4605adadea4a18224325bc4de0f7397e918997e079"
+    },
+    {
+      "viewportId": "VP-07",
+      "viewportName": "Desktop Standard",
+      "width": 1280,
+      "height": 900,
+      "surface": "Flutter Reference",
+      "filename": "1280-flutter.png",
+      "relativePath": "website/docs/verification/screenshots/1280-flutter.png",
+      "sizeBytes": 223615,
+      "sha256": "b37a7a6926647a30e0ba18cd33ee0fa397d69d664c05473d8eb1e2fdf1bfc5ff"
+    },
+    {
+      "viewportId": "VP-07",
+      "viewportName": "Desktop Standard",
+      "width": 1280,
+      "height": 900,
+      "surface": "React Conversion",
+      "filename": "1280-react.png",
+      "relativePath": "website/docs/verification/screenshots/1280-react.png",
+      "sizeBytes": 385596,
+      "sha256": "230085f1ff739f0328f5b39c036aa96464c4c731a0fd6a19aededffc539ffc05"
+    },
+    {
+      "viewportId": "VP-08",
+      "viewportName": "Desktop Large",
+      "width": 1440,
+      "height": 900,
+      "surface": "Flutter Reference",
+      "filename": "1440-flutter.png",
+      "relativePath": "website/docs/verification/screenshots/1440-flutter.png",
+      "sizeBytes": 251617,
+      "sha256": "15cda52d7d9ebd4b5d4623b79282169fb16a7eb58278924c403fe6f5b5bcc8dd"
+    },
+    {
+      "viewportId": "VP-08",
+      "viewportName": "Desktop Large",
+      "width": 1440,
+      "height": 900,
+      "surface": "React Conversion",
+      "filename": "1440-react.png",
+      "relativePath": "website/docs/verification/screenshots/1440-react.png",
+      "sizeBytes": 411723,
+      "sha256": "9a74dde2a82f57f124b2b7d28a88982311630fd96c73d0b1c4977336f4aeb882"
+    }
+  ]
+}

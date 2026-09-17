@@ -1,209 +1,440 @@
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { heroStats, primaryNavigation, siteGroups } from '../app/churchBlueprint';
-import SectionCard from '../components/ui/SectionCard';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase.js';
+import { useAppState } from '../app/providers.jsx';
+import { useFirestoreQuery } from '../hooks/useFirestoreQuery.js';
+import { COLLECTIONS } from '../lib/firestore.js';
+import { YouTubeEmbed } from '../components/media/YouTubeEmbed.jsx';
+import { VideoPlayer } from '../components/media/VideoPlayer.jsx';
+import { SiteFooter } from '../components/layout/SiteFooter.jsx';
+import { MobileDrawer } from '../components/layout/MobileDrawer.jsx';
+import { QuickActionButtons } from '../components/common/QuickActionButtons.jsx';
+import { isFutureEvent } from '../lib/format.js';
+import { ChevronRight } from '../components/common/Icons.jsx';
 
-const quickLinks = [
-  {
-    title: 'Locations',
-    slug: '/locations',
-    copy:
-      'With branches in multiple countries, the site helps people find the nearest church quickly.',
-  },
-  {
-    title: 'Watch',
-    slug: '/watch',
-    copy:
-      'Sermons, livestreams, and the latest video content are grouped into a clear media hub.',
-  },
-  {
-    title: 'About Us',
-    slug: '/about-us',
-    copy:
-      'Leadership, mission, and church story are presented in one place instead of scattered pages.',
-  },
-  {
-    title: 'Give',
-    slug: '/give',
-    copy:
-      'Tithes, offerings, and campaign routes are kept visible so giving is easy to find.',
-  },
-];
+const DEFAULT_SERMON_URL =
+  'https://firebasestorage.googleapis.com/v0/b/ssmi-database.firebasestorage.app/o/Sunday%20Videos%2F14%20Sep%2025%20Live%20Sermons.mp4?alt=media&token=2b9bfc8a-00e9-46b1-91d2-3586aba37202';
+const DEFAULT_THEME_IMAGE = '/assets/images/moving_from_glory_to_glory_theme.png';
 
-const spotlightGroups = ['branches', 'events', 'resources'];
+/**
+ * HomePage reproducing HomeWidget:
+ * flutter-website/lib/main_pages/home/home_widget.dart
+ */
+export function HomePage() {
+  const { toggleDrawer } = useAppState();
 
-export default function HomePage() {
-  const branchGroup = siteGroups.find((group) => group.key === 'branches');
-  const spotlightRoutes = siteGroups
-    .filter((group) => spotlightGroups.includes(group.key))
-    .flatMap((group) => group.items)
-    .slice(0, 6);
+  const [homepageContent, setHomepageContent] = useState({});
+  const { data: events } = useFirestoreQuery(COLLECTIONS.EVENTS);
+  const { data: branches } = useFirestoreQuery(COLLECTIONS.BRANCHES);
+
+  useEffect(() => {
+    document.title = 'Sword of the Spirit Ministries | Moving from Glory to Glory';
+
+    try {
+      const docRef = doc(db, COLLECTIONS.WEBSITE_CONTENT, 'homepage');
+      const unsubscribe = onSnapshot(
+        docRef,
+        (snap) => {
+          if (snap.exists()) {
+            setHomepageContent(snap.data());
+          }
+        },
+        (err) => {
+          console.warn('Could not load websiteContent/homepage:', err);
+        }
+      );
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('Firestore initialization error on homepage:', err);
+    }
+  }, []);
+
+  const sermonVideoUrl =
+    (homepageContent.latestSermonVideoUrl || '').trim() || DEFAULT_SERMON_URL;
+  const isYouTube =
+    sermonVideoUrl.includes('youtube.com') || sermonVideoUrl.includes('youtu.be');
+
+  const themeImageDesktop =
+    (homepageContent.yearThemeDesktopImageUrl || '').trim() || DEFAULT_THEME_IMAGE;
+  const themeImageMobile =
+    (homepageContent.yearThemeMobileImageUrl || '').trim() || DEFAULT_THEME_IMAGE;
+  const yearThemeTitle =
+    (homepageContent.yearThemeTitle || '').trim() || 'Moving from Glory to Glory';
+  const yearThemeSubtitle =
+    (homepageContent.yearThemeSubtitle || '').trim();
+  const latestSermonTitle =
+    (homepageContent.latestSermonTitle || '').trim();
+
+  const navItems = [
+    { name: 'Locations', path: '/locations' },
+    { name: 'Watch', path: '/watch' },
+    { name: 'About Us', path: '/about-us' },
+    { name: 'Care', path: '/care' },
+    { name: 'Events', path: '/events' },
+    { name: 'Give', path: '/give' },
+  ];
 
   return (
-    <main>
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(201,115,3,0.16),transparent_28%),radial-gradient(circle_at_top_right,rgba(25,36,49,0.2),transparent_32%)]" />
-        <div className="relative mx-auto grid w-full max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[1.1fr_0.9fr] lg:py-14">
-          <div className="space-y-6 rounded-[2rem] bg-brand-navy p-8 text-white shadow-soft md:p-10">
-            <p className="text-xs uppercase tracking-[0.3em] text-brand-gold">Year of Running Lap</p>
-            <h1 className="max-w-2xl text-4xl font-bold leading-tight md:text-5xl">
-              Welcome Home
-            </h1>
-            <p className="max-w-2xl text-base leading-7 text-slate-200">
-              This is the church landing page rebuilt from the FlutterFlow homepage. It keeps the
-              public experience centered on worship, branch discovery, sermons, and giving.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <a
-                href="/watch"
-                className="rounded-full bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-navy transition hover:opacity-95"
-              >
-                Watch Sermons
-              </a>
-              <a
-                href="/locations"
-                className="rounded-full border border-white/30 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
-              >
-                Find a Location
-              </a>
-            </div>
-            <div className="grid gap-4 pt-2 sm:grid-cols-3">
-              {heroStats.map((stat) => (
-                <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-3xl font-bold text-white">{stat.value}</p>
-                  <p className="mt-1 text-sm text-slate-300">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+    <div className="min-h-screen bg-white text-ff-primary-text flex flex-col selection:bg-ff-primary selection:text-ff-primary-text">
+      {/* 1. HERO SECTION */}
+      {/* 1A. Desktop Hero (>= 991px) */}
+      <div className="hidden lg:block w-[90%] max-w-[1440px] mx-auto mt-[30px] mb-[20px] h-[600px] rounded-[30px] border border-ff-secondary relative overflow-hidden shadow-lg">
+        <img
+          src="/assets/images/Welcome_(1).png"
+          alt="Welcome to SSMI"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
 
-          <div className="grid gap-4">
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft">
-              <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Sunday Services</p>
-              <h2 className="mt-3 text-3xl font-bold text-brand-navy">09:00 and 11:00</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                In-person and online worship experience with live sermons and church updates.
-              </p>
-              <div className="mt-6 rounded-[1.5rem] bg-brand-light p-5">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Next live sermon
-                </p>
-                <p className="mt-2 text-lg font-bold text-brand-navy">Watch our Sermons</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Stream the latest message or open the full Watch page for the full sermon list.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {quickLinks.map((item) => (
-                <article
-                  key={item.slug}
-                  className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-soft"
-                >
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{item.title}</p>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">{item.copy}</p>
-                  <Link to={item.slug} className="mt-4 inline-flex text-sm font-semibold text-brand-gold">
-                    Open page
-                  </Link>
-                </article>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-7xl px-6 pb-8">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {quickLinks.map((item) => (
-            <SectionCard
-              key={item.slug}
-              title={item.title}
-              slug={item.slug}
-              note={item.copy}
-              action="Open route"
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-7xl px-6 py-8">
-        <div className="mb-6 max-w-3xl">
-          <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Branch focus</p>
-          <h2 className="mt-2 text-3xl font-bold text-brand-navy">Find a Location</h2>
-          <p className="mt-3 text-slate-600">
-            This mirrors the Flutter landing page's branch emphasis and keeps the service area
-            visible for people joining from different cities.
-          </p>
-        </div>
-
-        {branchGroup ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {branchGroup.items.slice(0, 6).map((item) => (
-              <SectionCard
-                key={item.slug}
-                title={item.title}
-                slug={item.slug}
-                note={item.note}
-                action={item.action}
-                groupTitle="Branch"
+        {/* Embedded Desktop Header */}
+        <div className="relative z-10 w-full p-5">
+          <div className="w-full bg-ff-secondary rounded-[30px] border border-ff-secondary p-3 flex items-center justify-between shadow-md">
+            <Link
+              to="/"
+              className="flex items-center justify-center w-[70px] h-[70px] p-[5px] rounded-[8px] overflow-hidden focus:outline-none"
+              aria-label="Sword of the Spirit Ministries Home"
+            >
+              <img
+                src="/assets/images/sword_logo.png"
+                alt="Sword Logo"
+                className="w-full h-full object-contain"
               />
-            ))}
-          </div>
-        ) : null}
-      </section>
+            </Link>
 
-      <section className="mx-auto w-full max-w-7xl px-6 py-8">
-        <div className="mb-6 max-w-3xl">
-          <p className="text-xs uppercase tracking-[0.28em] text-slate-500">More to explore</p>
-          <h2 className="mt-2 text-3xl font-bold text-brand-navy">Ministry, events, and resources</h2>
-          <p className="mt-3 text-slate-600">
-            The lower sections keep the rest of the church information architecture available
-            without turning the homepage into a directory.
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {spotlightRoutes.map((item) => (
-            <SectionCard
-              key={item.slug}
-              title={item.title}
-              slug={item.slug}
-              note={item.note}
-              action={item.action}
-              groupTitle="Spotlight"
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-7xl px-6 py-8 pb-14">
-        <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-8 shadow-soft lg:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Navigation</p>
-            <h2 className="mt-2 text-3xl font-bold text-brand-navy">Key public pages</h2>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {primaryNavigation.map((item) => (
+            <nav className="flex items-center gap-2">
+              {navItems.map((item) => (
                 <Link
-                  key={item.slug}
-                  to={item.slug}
-                  className="rounded-full border border-slate-200 px-3 py-1 text-sm font-medium text-slate-600 transition hover:border-brand-gold hover:text-brand-gold"
+                  key={item.path}
+                  to={item.path}
+                  className="h-10 px-4 rounded-[50px] text-base font-bold flex items-center justify-center transition-colors border bg-transparent text-white border-ff-primary hover:bg-white/10"
                 >
-                  {item.title}
+                  {item.name}
                 </Link>
               ))}
-            </div>
-          </div>
+            </nav>
 
-          <div className="rounded-[1.5rem] bg-brand-light p-6">
-            <p className="text-xs uppercase tracking-[0.28em] text-slate-500">What changed</p>
-            <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-700">
-              <li>The homepage is now styled like the FlutterFlow landing page.</li>
-              <li>The public site still keeps route navigation under the surface.</li>
-              <li>The admin app and shared functions stay tied to the same content model.</li>
-            </ul>
+            <button
+              type="button"
+              onClick={() => console.log('My Dashboard clicked')}
+              className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-primary hover:bg-white/90 transition-colors"
+            >
+              My Dashboard
+            </button>
           </div>
         </div>
+
+        {/* Action Button at bottom of hero */}
+        <div className="absolute bottom-6 inset-x-0 flex justify-center z-10">
+          <Link
+            to="/watch"
+            className="h-[65px] px-8 rounded-[40px] bg-ff-primary text-ff-primary-text text-xl font-bold border border-ff-secondary flex items-center gap-3 hover:bg-white/95 transition-transform hover:scale-105 shadow-lg"
+          >
+            <span>Watch our Sermons</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-7 h-7 text-ff-secondary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            </svg>
+          </Link>
+        </div>
+      </div>
+
+      {/* 1B. Mobile Hero (< 991px) */}
+      <div className="block lg:hidden w-[380px] max-w-[90%] mx-auto mt-[30px] h-[600px] rounded-[30px] border border-ff-secondary relative overflow-hidden shadow-lg bg-white">
+        <img
+          src="/assets/images/About_Us_Mobile.png"
+          alt="Welcome to SSMI"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+
+        {/* Embedded Mobile Header */}
+        <div className="relative z-10 w-full p-2.5">
+          <div className="w-full bg-ff-secondary rounded-[20px] p-2.5 flex items-center justify-between border border-transparent shadow-[0_0_30px_rgba(25,36,49,0.5)]">
+            <Link
+              to="/"
+              className="w-[50px] h-[50px] rounded-full overflow-hidden flex items-center justify-center focus:outline-none"
+              aria-label="Sword of the Spirit Ministries Home"
+            >
+              <img
+                src="/assets/images/SSMI_Logo_(No_background).png"
+                alt="SSMI Logo"
+                className="w-full h-full object-contain"
+              />
+            </Link>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => console.log('Dashboard clicked')}
+                className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-sm font-bold border border-ff-primary hover:bg-white/90 transition-colors"
+              >
+                Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={toggleDrawer}
+                aria-label="Open Navigation Menu"
+                className="w-[50px] h-[50px] rounded-full border border-ff-primary text-ff-primary flex items-center justify-center hover:bg-white/10 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Button on mobile hero */}
+        <div className="absolute bottom-6 inset-x-0 flex justify-center z-10">
+          <Link
+            to="/watch"
+            className="h-[55px] px-6 rounded-[40px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-secondary flex items-center gap-2 hover:bg-white/95 transition-transform shadow-lg"
+          >
+            <span>Watch our Sermons</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-5 h-5 text-ff-secondary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            </svg>
+          </Link>
+        </div>
+      </div>
+
+      {/* 2. THEME OF THE YEAR BANNER */}
+      <section className="w-[90%] max-w-[1440px] mx-auto my-10">
+        <div className="w-full rounded-[30px] border border-ff-secondary overflow-hidden shadow-sm bg-slate-900">
+          <picture>
+            <source media="(min-width: 991px)" srcSet={themeImageDesktop} />
+            <img
+              src={themeImageMobile}
+              alt={yearThemeTitle ? `Year Theme: ${yearThemeTitle}` : 'Year Theme: Moving from Glory to Glory'}
+              title={yearThemeSubtitle || yearThemeTitle}
+              className="w-full h-auto object-contain max-h-[500px]"
+              onError={(e) => {
+                e.target.src = DEFAULT_THEME_IMAGE;
+              }}
+            />
+          </picture>
+        </div>
       </section>
-    </main>
+
+      {/* 3. FEATURED LIVE / LATEST SERMON SECTION */}
+      <section className="w-[90%] max-w-[1100px] mx-auto my-12 grid grid-cols-1 lg:grid-cols-[minmax(0,800px)_minmax(300px,1fr)] gap-5 items-center">
+        <div className="flex flex-col space-y-3">
+          <div className="bg-black rounded-[30px] overflow-hidden border border-ff-secondary shadow-lg aspect-video flex items-center justify-center">
+            {isYouTube ? (
+              <YouTubeEmbed url={sermonVideoUrl} />
+            ) : (
+              <VideoPlayer src={sermonVideoUrl} controls poster="/assets/images/Sermons.png" />
+            )}
+          </div>
+        </div>
+
+        <QuickActionButtons className="lg:py-5" />
+      </section>
+
+      {/* 4. UPCOMING EVENTS SPOTLIGHT */}
+      <section className="w-[90%] max-w-[1440px] mx-auto my-12">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">
+              What's Happening
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-ff-secondary mt-1">
+              Upcoming Events & Convocations
+            </h2>
+          </div>
+          <Link
+            to="/events"
+            className="px-6 py-2.5 rounded-[30px] border border-ff-secondary text-ff-secondary font-bold text-sm hover:bg-slate-50 transition-colors inline-flex items-center gap-1"
+          >
+            <span>View Full Calendar</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {events.filter(isFutureEvent).length > 0 ? (
+            events.filter(isFutureEvent).slice(0, 3).map((event) => (
+              <div
+                key={event.id}
+                className="bg-white rounded-[24px] border border-ff-secondary p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow"
+              >
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">
+                    {event.category || 'Special Convocation'}
+                  </span>
+                  <h3 className="text-xl font-bold text-ff-secondary mt-1 mb-2">
+                    {event.title || 'Church Gathering'}
+                  </h3>
+                  <p className="text-sm text-slate-600 line-clamp-3 mb-6">
+                    {event.description || 'Join us for a dynamic encounter in the presence of God.'}
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-500">
+                    {event.location || 'SSMI Campus'}
+                  </span>
+                  <Link
+                    to={`/event?id=${event.id}`}
+                    className="text-xs font-bold text-ff-secondary hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>Details & Register</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="bg-white rounded-[24px] border border-ff-secondary p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">
+                    Flagship Event
+                  </span>
+                  <h3 className="text-xl font-bold text-ff-secondary mt-1 mb-2">
+                    Annual Fire Conference
+                  </h3>
+                  <p className="text-sm text-slate-600 mb-6">
+                    Apostolic convocation of revelation, healing, and holy impartation with Apostle Bheki Thwala.
+                  </p>
+                </div>
+                <Link
+                  to="/fire-conference"
+                  className="py-2.5 rounded-[20px] bg-ff-secondary text-white text-center text-xs font-bold hover:bg-slate-800 inline-flex items-center justify-center gap-1"
+                >
+                  <span>Register Free</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              <div className="bg-white rounded-[24px] border border-ff-secondary p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">
+                    Youth Convocation
+                  </span>
+                  <h3 className="text-xl font-bold text-ff-secondary mt-1 mb-2">
+                    Camp YOLO Retreat
+                  </h3>
+                  <p className="text-sm text-slate-600 mb-6">
+                    Annual 4-day summer youth adventure with night bonfire encounters and outdoor games.
+                  </p>
+                </div>
+                <Link
+                  to="/camp-yolo"
+                  className="py-2.5 rounded-[20px] bg-ff-secondary text-white text-center text-xs font-bold hover:bg-slate-800 inline-flex items-center justify-center gap-1"
+                >
+                  <span>Learn More</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              <div className="bg-white rounded-[24px] border border-ff-secondary p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">
+                    Men's Gathering
+                  </span>
+                  <h3 className="text-xl font-bold text-ff-secondary mt-1 mb-2">
+                    Superman Men’s Conference
+                  </h3>
+                  <p className="text-sm text-slate-600 mb-6">
+                    National brotherhood gathering focused on wealth creation, spiritual leadership, and fatherhood.
+                  </p>
+                </div>
+                <Link
+                  to="/superman-conference"
+                  className="py-2.5 rounded-[20px] bg-ff-secondary text-white text-center text-xs font-bold hover:bg-slate-800 inline-flex items-center justify-center gap-1"
+                >
+                  <span>View Details</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* 5. LOCATIONS & BRANCH DIRECTORY */}
+      <section className="w-[90%] max-w-[1440px] mx-auto my-12 bg-ff-secondary text-white rounded-[30px] p-8 sm:p-12 border border-ff-secondary shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4 border-b border-white/10 pb-6">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">
+              Find a Campus
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mt-1">
+              One Church Across Nations
+            </h2>
+            <p className="text-sm text-white/80 mt-1">
+              Join us in-person across South Africa, Eswatini, Nigeria, or connect online.
+            </p>
+          </div>
+          <Link
+            to="/locations"
+            className="px-6 py-3 rounded-[30px] bg-ff-primary text-ff-primary-text font-bold text-sm hover:bg-white/90 transition-colors shrink-0 inline-flex items-center gap-1.5"
+          >
+            <span>All Campus Locations</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { name: 'eMalahleni (HQ)', slug: 'emalahleni', desc: 'Main Campus • 6 Clarendon Ave' },
+            { name: 'Ludzeludze', slug: 'ludzeludze', desc: 'Eswatini Branch' },
+            { name: 'Lagos', slug: 'lagos', desc: 'Nigeria Campus' },
+            { name: 'Online Campus', slug: 'online', desc: 'Live Digital Stream' },
+          ].map((b) => (
+            <Link
+              key={b.slug}
+              to={`/${b.slug}`}
+              className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-[20px] p-5 transition-colors group block"
+            >
+              <h4 className="text-lg font-bold text-white group-hover:text-ff-alternate transition-colors">
+                {b.name}
+              </h4>
+              <p className="text-xs text-white/60 mt-1">{b.desc}</p>
+              <span className="text-xs text-ff-alternate font-semibold mt-3 inline-flex items-center gap-1">
+                <span>Visit Campus Page</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* 6. SITE FOOTER */}
+      <SiteFooter />
+
+      {/* 7. MOBILE DRAWER */}
+      <MobileDrawer />
+    </div>
   );
 }
+
+export default HomePage;

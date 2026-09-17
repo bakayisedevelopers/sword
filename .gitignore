@@ -1,7 +1,15 @@
 /admin/node_modules/
 /admin/dist/
-/website/node_modules/
-/website/dist/
+admin/.env
+admin/.env.local
+cloud-functions/.env
+cloud-functions/.runtimeconfig.json
 **/node_modules/
 **/dist/
 *.log
+
+# Local agent / Firebase / scratch artifacts
+.codex-remote-attachments/
+.firebase/
+scratch_*
+preview-home*.png

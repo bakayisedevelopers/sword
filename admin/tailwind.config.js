@@ -5,9 +5,9 @@ export default {
     extend: {
       colors: {
         brand: {
-          navy: '#192431',
-          gold: '#C97303',
-          light: '#F7F8FA',
+          navy: '#101601',
+          gold: '#DBFF54',
+          light: '#F4F7D8',
         },
       },
       boxShadow: {

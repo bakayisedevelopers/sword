@@ -1,12 +1,37 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      return signedIn() && request.auth.token.roles != null && role in request.auth.token.roles;
+    }
+
+    function canManageMedia() {
+      return hasRole('super_admin') || hasRole('global_editor');
+    }
+
+    function validImageOrVideo() {
+      return request.resource.size < 50 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*|video/.*|application/pdf');
+    }
+
+    match /media/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if canManageMedia() && validImageOrVideo();
+      allow delete: if canManageMedia();
+    }
+
+    match /users/{userId}/{allPaths=**} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn() && request.auth.uid == userId && validImageOrVideo();
+      allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
-    }
-    match /users/{userId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth.uid == userId;
     }
   }
 }

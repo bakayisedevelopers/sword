@@ -7,7 +7,6 @@ import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
-import '/flutter_flow/flutter_flow_youtube_player.dart';
 import '/flutter_flow/form_field_controller.dart';
 import 'dart:async';
 import 'dart:math';
@@ -29,20 +28,20 @@ class BranchTemplateModel extends FlutterFlowModel<BranchTemplateWidget> {
   ///  State fields for stateful widgets in this page.
 
   // State field(s) for serviceTimes widget.
-  FormFieldController<List<String>>? serviceTimesValueController1;
-  String? get serviceTimesValue1 =>
-      serviceTimesValueController1?.value?.firstOrNull;
-  set serviceTimesValue1(String? val) =>
-      serviceTimesValueController1?.value = val != null ? [val] : [];
+  FormFieldController<List<String>>? serviceTimesValueController;
+  String? get serviceTimesValue =>
+      serviceTimesValueController?.value?.firstOrNull;
+  set serviceTimesValue(String? val) =>
+      serviceTimesValueController?.value = val != null ? [val] : [];
   // State field(s) for Expandable widget.
   late ExpandableController expandableExpandableController1;
 
-  // State field(s) for serviceTimes widget.
-  FormFieldController<List<String>>? serviceTimesValueController2;
-  String? get serviceTimesValue2 =>
-      serviceTimesValueController2?.value?.firstOrNull;
-  set serviceTimesValue2(String? val) =>
-      serviceTimesValueController2?.value = val != null ? [val] : [];
+  // State field(s) for serviceTimesM widget.
+  FormFieldController<List<String>>? serviceTimesMValueController;
+  String? get serviceTimesMValue =>
+      serviceTimesMValueController?.value?.firstOrNull;
+  set serviceTimesMValue(String? val) =>
+      serviceTimesMValueController?.value = val != null ? [val] : [];
   // State field(s) for Expandable widget.
   late ExpandableController expandableExpandableController2;
 
@@ -82,12 +81,6 @@ class BranchTemplateModel extends FlutterFlowModel<BranchTemplateWidget> {
   FocusNode? messageMFocusNode;
   TextEditingController? messageMTextController;
   String? Function(BuildContext, String?)? messageMTextControllerValidator;
-  // State field(s) for Expandable widget.
-  late ExpandableController expandableExpandableController3;
-
-  // State field(s) for Expandable widget.
-  late ExpandableController expandableExpandableController4;
-
   // Model for footer component.
   late FooterModel footerModel;
 
@@ -118,8 +111,6 @@ class BranchTemplateModel extends FlutterFlowModel<BranchTemplateWidget> {
     messageMFocusNode?.dispose();
     messageMTextController?.dispose();
 
-    expandableExpandableController3.dispose();
-    expandableExpandableController4.dispose();
     footerModel.dispose();
   }
 }

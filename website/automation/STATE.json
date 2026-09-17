@@ -1,0 +1,191 @@
+{
+  "$schema": "./STATE.schema.json",
+  "schemaVersion": "2.3.0",
+  "project": "Sword of the Spirit Ministries (SSMI) - Repository Multi-Surface Platform",
+  "projectStatus": "awaiting_user_review",
+  "reviewState": "awaiting_user_review_gm07",
+  "approvalConstraints": "Bounded local non-production implementation only. Does not resolve DEC-01 through DEC-06. Does not authorize production deployment. Does not permit changes to live staff access (DEC-03) or submission architecture (DEC-04) while decisions remain open.",
+  "approvedAt": "2026-09-13T19:18:55+02:00",
+  "currentGlobalMilestone": "GM-07",
+  "latestVerifiedMilestone": "GM-06",
+  "activeWorker": null,
+  "activeRunId": "RUN-029",
+  "updatedAt": "2026-09-15T22:05:00+02:00",
+  "conversionWorkstream": {
+    "name": "Workstream 1: Flutter-to-React Website Conversion",
+    "status": "active_workstream",
+    "completionTracking": "unified_under_global_milestones",
+    "duplicateTracking": false,
+    "description": "Preserves detailed 9-milestone conversion roadmap (Milestones 0-8) mapped directly into Global Milestones (GM-00 to GM-09) without duplicate percentage accounting."
+  },
+  "surfaces": {
+    "publicWebsite": {
+      "path": "website/",
+      "techStack": "React 19, Vite, Tailwind CSS, React Router v7",
+      "status": "in_conversion",
+      "scaffoldCompletionPercent": 60,
+      "functionalParityPercent": 75,
+      "visualFidelityVerifiedPercent": 0,
+      "targetVisualFidelityPercent": 98
+    },
+    "adminCms": {
+      "path": "admin/",
+      "techStack": "React 18, Vite, Tailwind CSS, Firebase SDK",
+      "status": "intake_pipelines_aligned",
+      "workspacesCount": 10,
+      "intakePipesAligned": true
+    },
+    "flutterWebsite": {
+      "path": "flutter-website/",
+      "techStack": "FlutterFlow, Dart",
+      "status": "read_only_reference",
+      "staticArtifact": "flutter-website/build/web"
+    },
+    "cloudFunctions": {
+      "path": "cloud-functions/",
+      "techStack": "Node 20, Firebase Functions v2",
+      "status": "deployed_needs_cms_wiring",
+      "functionsCount": 3
+    },
+    "sharedFunctions": {
+      "path": "functions/",
+      "techStack": "ESM JavaScript shared blueprint",
+      "status": "active"
+    }
+  },
+  "globalMilestones": {
+    "GM-00": {
+      "name": "Repository-Wide Audit, Architecture Discovery & Planning System",
+      "status": "user_approved",
+      "completedAt": "2026-09-13T15:40:00+02:00",
+      "approvedAt": "2026-09-13T19:18:55+02:00"
+    },
+    "GM-01": {
+      "name": "Shared Data Contracts & Core Query Engine",
+      "status": "completed",
+      "completedAt": "2026-09-13T22:03:00+02:00",
+      "prerequisites": ["GM-00"]
+    },
+    "GM-02": {
+      "name": "Public Form Intake & CMS Roster Synchronization",
+      "status": "completed",
+      "completedAt": "2026-09-14T08:02:00+02:00",
+      "prerequisites": ["GM-01"]
+    },
+    "GM-03": {
+      "name": "Dynamic Branch Engine & Legacy Route Parity",
+      "status": "completed",
+      "completedAt": "2026-09-14T13:30:00+02:00",
+      "prerequisites": ["GM-01"]
+    },
+    "GM-04": {
+      "name": "Media Library, Content Publishing & Parameter Routing",
+      "status": "completed",
+      "completedAt": "2026-09-14T16:05:00+02:00",
+      "prerequisites": ["GM-01"]
+    },
+    "GM-05": {
+      "name": "Public Demographic Page Families & Conference Landings",
+      "status": "completed",
+      "completedAt": "2026-09-14T17:25:00+02:00",
+      "prerequisites": ["GM-01", "GM-02", "GM-04"]
+    },
+    "GM-06": {
+      "name": "Admin CMS Staff Management, RBAC & Cloud Functions Integration",
+      "status": "completed",
+      "completedAt": "2026-09-15T06:00:00+02:00",
+      "prerequisites": ["GM-02"]
+    },
+    "GM-07": {
+      "name": "Authentic Multi-Viewport Visual Parity & Responsive Alignment",
+      "status": "awaiting_user_review",
+      "prerequisites": ["GM-01", "GM-02", "GM-03", "GM-04", "GM-05"]
+    },
+    "GM-08": {
+      "name": "Cross-Surface Integration, Staging Verification & Pre-Cutover",
+      "status": "pending",
+      "prerequisites": ["GM-06", "GM-07"]
+    },
+    "GM-09": {
+      "name": "Production Cutover & Deployment Gate",
+      "status": "pending",
+      "prerequisites": ["GM-08", "Explicit user written approval in USER_ACTIONS.md"]
+    }
+  },
+  "conversionMilestonesMapping": {
+    "Milestone 0": "Mapped to GM-00 (Completed)",
+    "Milestone 1": "Mapped to GM-01 (Shared Query Engine & Schema Integrity)",
+    "Milestone 2": "Mapped to GM-02 (Form Intake & CMS Roster Sync)",
+    "Milestone 3": "Mapped to GM-03 (Branch Engine & Legacy Routes)",
+    "Milestone 4": "Mapped to GM-04 (Content Directory & Media Parity)",
+    "Milestone 5": "Mapped to GM-05 (Demographic Pages & Conferences)",
+    "Milestone 6": "Mapped to GM-07 (Multi-Viewport Visual Fidelity)",
+    "Milestone 7": "Mapped to GM-08 (Cross-App Pre-Cutover Verification)",
+    "Milestone 8": "Mapped to GM-09 (Cutover & Production Deployment)"
+  },
+  "openDecisions": {
+    "DEC-01": {
+      "area": "Public Nav ('My Dashboard')",
+      "dependentTask": "Task PUB-01-T2 (GM-01/GM-07)",
+      "status": "pending_user_decision",
+      "nonBlocking": true
+    },
+    "DEC-02": {
+      "area": "YouTube Sermon Automated Sync",
+      "dependentTask": "Task CMS-08-T2 (GM-04/GM-06)",
+      "status": "pending_user_decision",
+      "nonBlocking": true
+    },
+    "DEC-03": {
+      "area": "Admin Auth Custom Claims Assignment",
+      "dependentTask": "Tasks CMS-11-T1b and CMS-11-T2 (GM-06)",
+      "eligibleWithoutDecision": "CMS-11-T1a: read-only staff profile viewing and non-privileged UI only",
+      "blockedUntilResolved": [
+        "CMS-11-T1b: any write that grants or changes effective staff roles, branch access, or custom claims",
+        "CMS-11-T2: callable setAdminAccess invocation",
+        "Any change to security rules related to RBAC"
+      ],
+      "status": "pending_user_decision",
+      "nonBlocking": false,
+      "note": "Non-blocking only for read-only UI subtask CMS-11-T1a. All write paths blocked until authorization path is verified and decision is resolved."
+    },
+    "DEC-04": {
+      "area": "Public Form Intake Callable Migration",
+      "dependentTask": "Tasks INT-04-T1b and INT-04-T2 (GM-02/GM-08)",
+      "eligibleWithoutDecision": "INT-04-T1a: form UI rendering, field validation, firestore.rules schema inspection, non-production tests only",
+      "blockedUntilResolved": [
+        "INT-04-T1b: any new or changed direct-to-Firestore submission write",
+        "INT-04-T2: callable submitPublicRequest migration",
+        "Any change to existing live Flutter or React submission behavior"
+      ],
+      "status": "pending_user_decision",
+      "nonBlocking": false,
+      "note": "Non-blocking only for form UI and schema inspection subtask INT-04-T1a. All submission write path changes blocked until path selection and compatibility requirements are confirmed by user."
+    },
+    "DEC-05": {
+      "area": "Legacy Branch URLs (Redirects vs Templates)",
+      "dependentTask": "Task PUB-04-T3 (GM-03)",
+      "status": "pending_user_decision",
+      "nonBlocking": true
+    },
+    "DEC-06": {
+      "area": "CSV/Excel Data Export for Registrations & Partners",
+      "dependentTask": "Task CMS-05-T1 (GM-06)",
+      "status": "pending_user_scope_decision",
+      "requiredForLaunch": false,
+      "nonBlocking": true
+    }
+  },
+  "defects": {
+    "open": 0,
+    "resolved": 9,
+    "registered": ["BUG-01", "BUG-02", "BUG-03", "BUG-04", "BUG-05", "BUG-06", "BUG-07", "BUG-08", "BUG-09"],
+    "resolvedList": ["BUG-02", "BUG-04", "BUG-03", "BUG-01", "BUG-05", "BUG-07", "BUG-06", "BUG-08", "BUG-09"]
+  },
+  "guardrails": {
+    "flutterSourceReadOnly": true,
+    "requireUserVisualSignoff": true,
+    "noProductionDeploymentWithoutApproval": true,
+    "blockers": []
+  }
+}

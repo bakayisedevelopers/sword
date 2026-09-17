@@ -1,17 +1,18 @@
 {
   "projects": {
-    "default": "sword-website-f959c532"
+    "default": "ssmi-database"
   },
   "targets": {
-    "sword-website-f959c532": {
+    "ssmi-database": {
       "hosting": {
         "website": [
-          "sword-website-f959c532"
+          "ssmi-web"
         ],
         "admin": [
-          "sword-admin"
+          "ssmi-admin"
         ]
       }
     }
-  }
+  },
+  "etags": {}
 }

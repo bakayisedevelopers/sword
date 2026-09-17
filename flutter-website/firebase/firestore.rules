@@ -1,74 +1,336 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /sermons/{document} {
-      allow create: if true;
-      allow read: if true;
-      allow write: if true;
-      allow delete: if true;
+    function signedIn() {
+      return request.auth != null;
     }
 
-    match /partners/{document} {
-      allow create: if true;
-      allow read: if true;
-      allow write: if true;
-      allow delete: if true;
+    function hasRole(role) {
+      return signedIn() && (
+        request.auth.token.email == 'developer.obie@gmail.com' ||
+        request.auth.token.email == 'bakayise.developers@gmail.com' ||
+        (request.auth.token.roles != null && role in request.auth.token.roles) ||
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles != null &&
+          role in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role
+      );
     }
 
+    function canManageContent() {
+      return hasRole('super_admin') || hasRole('global_editor');
+    }
+
+    function canReviewSubmissions() {
+      return hasRole('super_admin') || hasRole('global_editor') || hasRole('care_team');
+    }
+
+    function hasBranchScope(branch) {
+      return signedIn() && branch is string && (
+        canManageContent() ||
+        (hasRole('branch_editor') && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch == branch ||
+          (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.other_branches is list &&
+            branch in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.other_branches)
+        ))
+      );
+    }
+
+    function hasAnyBranchScope(branches) {
+      return signedIn() && branches is list && (
+        branches.hasAny([get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch]) ||
+        (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.other_branches is list &&
+          branches.hasAny(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.other_branches)
+        )
+      );
+    }
+
+    function canEditMinistry(documentId, data) {
+      return canManageContent() ||
+        (hasRole('branch_editor') && hasAnyBranchScope(data.branches)) ||
+        (
+          hasRole('ministry_editor') &&
+          (
+            (
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.ministryIds is list &&
+              documentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.ministryIds
+            ) ||
+            (
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.ministries is list &&
+              (
+                data.name in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.ministries ||
+                data.ministryName in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.ministries
+              )
+            )
+          )
+        );
+    }
+
+    function canEditBranchMedia(data) {
+      return canManageContent() ||
+        (hasRole('branch_editor') && hasBranchScope(data.branchName));
+    }
+
+    function canEditEvent(data) {
+      return canManageContent() ||
+        (
+          hasRole('branch_editor') &&
+          data.global != true &&
+          (
+            hasBranchScope(data.branch_name) ||
+            hasAnyBranchScope(data.branches)
+          )
+        );
+    }
+
+    function canReadReports() {
+      return canReviewSubmissions() || hasRole('reports_viewer');
+    }
+
+    function safeBranchRoleList(roles) {
+      return roles is list && roles.hasOnly(['branch_editor', 'ministry_editor', 'care_team', 'reports_viewer']);
+    }
+
+    function safeBranchUserWrite(data) {
+      return (!('roles' in data) || safeBranchRoleList(data.roles));
+    }
+
+    function safeBranchAccessRequestReview(data) {
+      return (!('approvedRoles' in data) || safeBranchRoleList(data.approvedRoles)) &&
+        (!('requestedRoles' in data) || safeBranchRoleList(data.requestedRoles));
+    }
+
+    function pendingActivationProfile(data) {
+      return data.email is string &&
+        data.authAccount != true &&
+        data.authStatus != 'migrated';
+    }
+
+    function ownsEmail(data) {
+      return signedIn() &&
+        request.auth.token.email is string &&
+        data.email is string &&
+        data.email == request.auth.token.email;
+    }
+
+    function optionalString(data, field, maxLength) {
+      return !(field in data) || (data[field] is string && data[field].size() <= maxLength);
+    }
+
+    function requiredString(data, field, maxLength) {
+      return field in data && data[field] is string &&
+        data[field].size() > 0 && data[field].size() <= maxLength;
+    }
+
+    function optionalTimestamp(data, field) {
+      return !(field in data) || data[field] is timestamp;
+    }
+
+    function validRequest(data) {
+      return data.keys().hasOnly(['name', 'surname', 'cell', 'message', 'type', 'date', 'branch']) &&
+        requiredString(data, 'name', 120) &&
+        requiredString(data, 'cell', 40) &&
+        requiredString(data, 'message', 5000) &&
+        requiredString(data, 'type', 80) &&
+        optionalString(data, 'surname', 120) &&
+        optionalString(data, 'branch', 160) &&
+        optionalTimestamp(data, 'date');
+    }
+
+    function validSignUp(data) {
+      return data.keys().hasOnly(['name', 'surname', 'cell', 'branch', 'message', 'type', 'date']) &&
+        requiredString(data, 'name', 120) &&
+        requiredString(data, 'cell', 40) &&
+        optionalString(data, 'surname', 120) &&
+        optionalString(data, 'branch', 160) &&
+        optionalString(data, 'message', 5000) &&
+        (!( 'type' in data) || (data.type is list && data.type.size() <= 10)) &&
+        optionalTimestamp(data, 'date');
+    }
+
+    function validRegistration(data) {
+      return data.keys().hasOnly(['name', 'surname', 'cell', 'message', 'eventName', 'branch', 'date']) &&
+        requiredString(data, 'name', 120) &&
+        requiredString(data, 'cell', 40) &&
+        requiredString(data, 'eventName', 200) &&
+        optionalString(data, 'surname', 120) &&
+        optionalString(data, 'message', 5000) &&
+        optionalString(data, 'branch', 160) &&
+        optionalTimestamp(data, 'date');
+    }
+
+    function validPartner(data) {
+      return data.keys().hasOnly([
+          'name', 'surname', 'dob', 'DOB', 'occupation', 'Occupation', 'workplace', 'address',
+          'cell', 'email', 'bornAgain', 'bornAgainDate', 'baptised', 'filled',
+          'tongues', 'homeCell', 'homeCellName', 'kid', 'parent', 'branch', 'postalCode'
+        ]) &&
+        requiredString(data, 'name', 120) &&
+        requiredString(data, 'surname', 120) &&
+        requiredString(data, 'cell', 40) &&
+        optionalString(data, 'occupation', 160) &&
+        optionalString(data, 'Occupation', 160) &&
+        optionalString(data, 'workplace', 160) &&
+        optionalString(data, 'address', 500) &&
+        optionalString(data, 'email', 200) &&
+        optionalString(data, 'bornAgain', 30) &&
+        optionalString(data, 'baptised', 30) &&
+        optionalString(data, 'filled', 30) &&
+        optionalString(data, 'tongues', 30) &&
+        optionalString(data, 'homeCell', 160) &&
+        optionalString(data, 'homeCellName', 160) &&
+        optionalString(data, 'kid', 30) &&
+        optionalString(data, 'branch', 160) &&
+        optionalString(data, 'postalCode', 30) &&
+        optionalTimestamp(data, 'dob') &&
+        optionalTimestamp(data, 'DOB') &&
+        optionalTimestamp(data, 'bornAgainDate');
+    }
+
+    function validRequestKeys(data) {
+      return data.keys().hasOnly(['name', 'surname', 'cell', 'message', 'type', 'date', 'branch']);
+    }
+
+    function validSignUpKeys(data) {
+      return data.keys().hasOnly(['name', 'surname', 'cell', 'branch', 'message', 'type', 'date']);
+    }
+
+    function validRegistrationKeys(data) {
+      return data.keys().hasOnly(['name', 'surname', 'cell', 'message', 'eventName', 'branch', 'date']);
+    }
+
+    function validPartnerKeys(data) {
+      return data.keys().hasOnly([
+          'name', 'surname', 'dob', 'DOB', 'occupation', 'Occupation', 'workplace', 'address',
+          'cell', 'email', 'bornAgain', 'bornAgainDate', 'baptised', 'filled',
+          'tongues', 'homeCell', 'homeCellName', 'kid', 'parent', 'branch', 'postalCode'
+        ]);
+    }
+
+    // Public website content. Publishing-state enforcement is added with the
+    // CMS migration; all current documents remain readable to avoid downtime.
+    match /branches/{document} {
+      allow read: if true;
+      allow write: if canManageContent();
+    }
     match /ministries/{document} {
-      allow create: if true;
       allow read: if true;
-      allow write: if true;
-      allow delete: if true;
+      allow create: if canEditMinistry(document, request.resource.data);
+      allow update: if canEditMinistry(document, resource.data) && canEditMinistry(document, request.resource.data);
+      allow delete: if canEditMinistry(document, resource.data);
+    }
+    match /events/{document} {
+      allow read: if true;
+      allow create: if canEditEvent(request.resource.data);
+      allow update: if canEditEvent(resource.data) && canEditEvent(request.resource.data);
+      allow delete: if canEditEvent(resource.data);
+    }
+    match /sermons/{document} {
+      allow read: if true;
+      allow create: if canEditBranchMedia(request.resource.data);
+      allow update: if canEditBranchMedia(resource.data) && canEditBranchMedia(request.resource.data);
+      allow delete: if canEditBranchMedia(resource.data);
+    }
+    match /podcast/{document} {
+      allow read: if true;
+      allow create: if canEditBranchMedia(request.resource.data);
+      allow update: if canEditBranchMedia(resource.data) && canEditBranchMedia(request.resource.data);
+      allow delete: if canEditBranchMedia(resource.data);
+    }
+    match /mediaSources/{document} {
+      allow read: if canManageContent() || hasBranchScope(resource.data.branchName);
+      allow create: if canEditBranchMedia(request.resource.data);
+      allow update: if canEditBranchMedia(resource.data) && canEditBranchMedia(request.resource.data);
+      allow delete: if canEditBranchMedia(resource.data);
+    }
+    match /websiteContent/{document} {
+      allow read: if true;
+      allow write: if canManageContent();
     }
 
-    match /signUps/{document} {
-      allow create: if true;
-      allow read: if true;
-      allow write: if true;
-      allow delete: if true;
-    }
-
+    // Legacy anonymous forms may submit only validated, immutable records.
+    // Staff review, status changes, and deletion require a privileged role.
     match /requests/{document} {
       allow create: if true;
-      allow read: if true;
-      allow write: if true;
-      allow delete: if true;
+      allow read, update, delete: if canReviewSubmissions() || hasBranchScope(resource.data.branch);
     }
-
-    match /branches/{document} {
+    match /signUps/{document} {
       allow create: if true;
-      allow read: if true;
-      allow write: if true;
-      allow delete: if true;
+      allow read, update, delete: if canReviewSubmissions() || hasBranchScope(resource.data.branch);
     }
-
-    match /users/{document} {
-      allow create: if true;
-      allow read: if true;
-      allow write: if true;
-      allow delete: if true;
-    }
-
-    match /events/{document} {
-      allow create: if true;
-      allow read: if true;
-      allow write: if true;
-      allow delete: if true;
-    }
-
-    match /podcast/{document} {
-      allow create: if true;
-      allow read: if true;
-      allow write: if true;
-      allow delete: if true;
-    }
-
     match /registrations/{document} {
       allow create: if true;
-      allow read: if true;
-      allow write: if true;
-      allow delete: if true;
+      allow read, update, delete: if canReviewSubmissions() || hasBranchScope(resource.data.branch);
+    }
+    match /partners/{document} {
+      allow create: if true;
+      allow read, update, delete: if canReviewSubmissions() || hasBranchScope(resource.data.branch);
+    }
+
+    // Public contacts must be explicitly marked public before the rules deploy.
+    match /users/{userId} {
+      allow get: if canManageContent() ||
+        request.auth.uid == userId ||
+        resource.data.publicProfile == true ||
+        hasBranchScope(resource.data.branch) ||
+        pendingActivationProfile(resource.data) ||
+        ownsEmail(resource.data);
+      allow list: if canManageContent() ||
+        (hasRole('branch_editor') && hasBranchScope(resource.data.branch)) ||
+        pendingActivationProfile(resource.data) ||
+        ownsEmail(resource.data);
+      allow create: if (signedIn() && request.auth.uid == userId) ||
+        canManageContent() ||
+        (hasRole('branch_editor') && hasBranchScope(request.resource.data.branch) && safeBranchUserWrite(request.resource.data));
+      allow update: if canManageContent() ||
+        request.auth.uid == userId ||
+        ownsEmail(resource.data) ||
+        (
+          hasRole('branch_editor') &&
+          hasBranchScope(resource.data.branch) &&
+          hasBranchScope(request.resource.data.branch) &&
+          safeBranchUserWrite(request.resource.data)
+        );
+      allow delete: if canManageContent();
+    }
+
+    match /accessRequests/{document} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow get, list: if canManageContent() ||
+        (
+          hasRole('branch_editor') &&
+          hasBranchScope(resource.data.requestedBranch)
+        );
+      allow update: if canManageContent() ||
+        (
+          hasRole('branch_editor') &&
+          hasBranchScope(resource.data.requestedBranch) &&
+          hasBranchScope(request.resource.data.requestedBranch) &&
+          safeBranchAccessRequestReview(request.resource.data)
+        );
+      allow delete: if canManageContent();
+    }
+
+    match /siteSettings/{document} {
+      allow read, write: if canManageContent();
+    }
+    match /pages/{document} {
+      allow read, write: if canManageContent();
+    }
+    match /media/{document} {
+      allow read, write: if canManageContent();
+    }
+    match /auditLogs/{document} {
+      allow read: if canReadReports();
+      allow write: if false;
+    }
+    match /submissions/{document} {
+      allow read: if canReviewSubmissions();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
