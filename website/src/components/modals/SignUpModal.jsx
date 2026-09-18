@@ -23,6 +23,7 @@ export function SignUpModal({ isOpen, onClose, initialMinistry = '' }) {
 
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
+  const [email, setEmail] = useState('');
   const [cell, setCell] = useState('');
   const [branch, setBranch] = useState('-- Select Branch --');
   const [ministry, setMinistry] = useState(initialMinistry || 'General');
@@ -48,21 +49,24 @@ export function SignUpModal({ isOpen, onClose, initialMinistry = '' }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !surname.trim() || !cell.trim()) return;
+    if (!name.trim() || !surname.trim() || !email.trim() || !cell.trim()) return;
 
     setSubmitting(true);
     try {
       await createRecord(COLLECTIONS.SIGN_UPS, {
         name: name.trim(),
         surname: surname.trim(),
+        email: email.trim().toLowerCase(),
         cell: cell.trim(),
         branch: branch !== '-- Select Branch --' ? branch.trim() : '',
         type: [ministry || 'General'],
         message: message.trim(),
         date: new Date(),
+        status: 'pending',
       });
       setName('');
       setSurname('');
+      setEmail('');
       setCell('');
       setBranch('-- Select Branch --');
       setMessage('');
@@ -123,14 +127,24 @@ export function SignUpModal({ isOpen, onClose, initialMinistry = '' }) {
               />
             </div>
 
-            <input
-              type="tel"
-              placeholder="Cell *"
-              value={cell}
-              onChange={(e) => setCell(e.target.value)}
-              required
-              className="w-full px-3 py-2 text-sm rounded-[8px] border border-ff-secondary focus:outline-none focus:ring-1 focus:ring-ff-secondary text-ff-primary-text"
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                type="email"
+                placeholder="Email Address *"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-sm rounded-[8px] border border-ff-secondary focus:outline-none focus:ring-1 focus:ring-ff-secondary text-ff-primary-text"
+              />
+              <input
+                type="tel"
+                placeholder="Cell *"
+                value={cell}
+                onChange={(e) => setCell(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-sm rounded-[8px] border border-ff-secondary focus:outline-none focus:ring-1 focus:ring-ff-secondary text-ff-primary-text"
+              />
+            </div>
 
             <select
               value={branch}
@@ -156,7 +170,7 @@ export function SignUpModal({ isOpen, onClose, initialMinistry = '' }) {
             <div className="flex justify-center mt-2">
               <button
                 type="submit"
-                disabled={submitting || !name || !surname || !cell}
+                disabled={submitting || !name || !surname || !email || !cell}
                 className="px-8 py-2 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-sm border border-ff-secondary hover:bg-slate-100 disabled:opacity-50 transition-colors shadow-sm"
               >
                 {submitting ? 'Submitting...' : 'Submit'}

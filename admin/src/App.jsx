@@ -38,9 +38,9 @@ function AdminShell() {
   return (
     <div className="min-h-dvh bg-slate-950 text-slate-100">
       <AdminHeader onMenuClick={() => setSidebarOpen(true)} />
-      <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-5 sm:px-6 sm:py-6 lg:grid-cols-[18rem_1fr] lg:items-start">
+      <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-5 sm:px-6 sm:py-6 lg:grid-cols-[18rem_1fr] lg:items-start overflow-x-hidden">
         <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="min-h-0 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:pr-1 lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden">
+        <div className="min-h-0 w-full min-w-0 overflow-x-hidden lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:pr-1 lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/workspace" element={<CmsWorkspacePage />} />

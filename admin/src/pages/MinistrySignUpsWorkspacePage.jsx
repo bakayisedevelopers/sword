@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { collection, doc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
 import { firestore } from '../lib/firebase';
+import { processMinistryVolunteerEnrollment } from '../lib/volunteerEnrollment';
 
 const signUpAccessRoles = ['super_admin', 'global_editor', 'branch_editor', 'care_team'];
 const acknowledgedStatuses = ['acknowledged', 'active', 'approved', 'contacted', 'completed'];
@@ -67,8 +68,11 @@ function SignUpRow({ acknowledging, onAcknowledge, signUp }) {
             <p className="truncate font-semibold text-white">{personName(signUp)}</p>
             <span className="shrink-0 rounded-full border border-brand-gold/30 px-2.5 py-0.5 text-[0.68rem] font-semibold text-brand-gold">{typeLabel(signUp.type)}</span>
             {signUp.branch ? <span className="shrink-0 rounded-full border border-white/10 px-2.5 py-0.5 text-[0.68rem] font-semibold text-slate-300">{signUp.branch}</span> : null}
+            {signUp.addedToVolunteers ? <span className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[0.68rem] font-semibold text-emerald-400">Volunteer</span> : null}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+            {signUp.email ? <span>{signUp.email}</span> : null}
+            {signUp.email ? <span>·</span> : null}
             <span>{signUp.cell || 'No cell'}</span>
             <span>·</span>
             <span className={acknowledged ? 'text-brand-gold' : 'text-slate-400'}>{normalizeStatus(signUp)}</span>
@@ -85,7 +89,7 @@ function SignUpRow({ acknowledging, onAcknowledge, signUp }) {
           onClick={() => onAcknowledge(signUp)}
           className="shrink-0 rounded-full border border-brand-gold/35 px-3 py-1.5 text-xs font-semibold text-brand-gold transition hover:bg-brand-gold hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {acknowledging ? 'Saving…' : 'Acknowledge'}
+          {acknowledging ? 'Saving…' : 'Acknowledge & Add Volunteer'}
         </button>
       ) : null}
     </article>
@@ -228,17 +232,28 @@ export default function MinistrySignUpsWorkspacePage() {
 
     try {
       const nowIso = new Date().toISOString();
+      const enrollment = await processMinistryVolunteerEnrollment(firestore, record, user);
+
       const payload = {
         status: 'acknowledged',
         acknowledgedAt: serverTimestamp(),
         acknowledgedBy: user?.displayName || user?.email || user?.uid || '',
+        addedToVolunteers: true,
+        volunteerUserId: enrollment.targetUserId || '',
         updatedAt: serverTimestamp(),
       };
       await setDoc(doc(firestore, 'signUps', record.id), payload, { merge: true });
       setSignUps((current) =>
         current.map((item) =>
           item.id === record.id
-            ? { ...item, status: 'acknowledged', acknowledgedAt: nowIso, acknowledgedBy: payload.acknowledgedBy }
+            ? {
+                ...item,
+                status: 'acknowledged',
+                acknowledgedAt: nowIso,
+                acknowledgedBy: payload.acknowledgedBy,
+                addedToVolunteers: true,
+                volunteerUserId: enrollment.targetUserId || item.volunteerUserId,
+              }
             : item
         )
       );

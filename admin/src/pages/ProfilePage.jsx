@@ -22,6 +22,15 @@ function TextField({ label, value, onChange, placeholder, readOnly = false, type
   );
 }
 
+function findMatchingBranch(options, targetBranch) {
+  if (!targetBranch || !options || !options.length) return targetBranch || '';
+  const needle = `${targetBranch}`.trim().toLowerCase();
+  const found = options.find(
+    (opt) => `${opt.id}`.trim().toLowerCase() === needle || `${opt.label}`.trim().toLowerCase() === needle
+  );
+  return found ? found.id : targetBranch;
+}
+
 export default function ProfilePage() {
   const { user, roles, profile } = useAuth();
   const [savingProfile, setSavingProfile] = useState(false);
@@ -37,12 +46,13 @@ export default function ProfilePage() {
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [requestReason, setRequestReason] = useState('');
 
+  const savedBranch = profile?.branch || user?.branch || '';
+
   useEffect(() => {
-    setName(user?.displayName || '');
-    setBranch(user?.branch || '');
-    setOffice(user?.office || '');
+    setName(profile?.displayName || user?.displayName || '');
+    setOffice(profile?.office || user?.office || '');
     setMinistryRoles(Array.isArray(profile?.staff_positions) ? profile.staff_positions : []);
-  }, [profile?.staff_positions, user]);
+  }, [profile, user]);
 
   useEffect(() => {
     let active = true;
@@ -54,7 +64,7 @@ export default function ProfilePage() {
           .map((branchDoc) => {
             const data = branchDoc.data() || {};
             return {
-              id: branchDoc.id,
+              id: data.name || branchDoc.id,
               label: data.name || branchDoc.id,
             };
           })
@@ -76,6 +86,14 @@ export default function ProfilePage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (savedBranch) {
+      const matched = findMatchingBranch(branchOptions, savedBranch);
+      setBranch(matched);
+      setRequestBranch((current) => current || matched);
+    }
+  }, [savedBranch, branchOptions]);
 
   const currentRoles = useMemo(() => roles || [], [roles]);
 

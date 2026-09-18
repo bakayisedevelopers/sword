@@ -12,6 +12,7 @@ import { Dialog } from '../components/ui/Dialog.jsx';
 import { SiteFooter } from '../components/layout/SiteFooter.jsx';
 import { MobileDrawer } from '../components/layout/MobileDrawer.jsx';
 import { QuickActionButtons } from '../components/common/QuickActionButtons.jsx';
+import { ChevronRight } from '../components/common/Icons.jsx';
 
 const PASTOR_IMAGE_FALLBACK = '/assets/images/B&Z_no_background_1.png';
 
@@ -309,24 +310,52 @@ function getSermonUrl(sermon) {
   return getImageValue(sermon.videoLink || sermon.video || sermon.link || sermon.videoUrl);
 }
 
-function InfoLine({ label, value, href }) {
-  if (!value) return null;
-  const content = href ? (
+function SocialOrWebButton({ label, href }) {
+  if (!href) return null;
+
+  let btnText = 'Open Link';
+  const l = label.toLowerCase();
+  if (l.includes('website')) btnText = 'Visit Website';
+  else if (l.includes('facebook')) btnText = 'Visit Facebook Page';
+  else if (l.includes('instagram')) btnText = 'Follow on Instagram';
+  else if (l.includes('youtube')) btnText = 'Watch on YouTube';
+  else if (l.includes('whatsapp')) btnText = 'Chat on WhatsApp';
+  else if (l.includes('phone')) btnText = 'Call Office';
+  else if (l.includes('email')) btnText = 'Send Email';
+  else if (l.includes('map') || l.includes('address')) btnText = 'View Location Map';
+
+  return (
     <button
       type="button"
       onClick={() => launchUrl(href)}
-      className="text-left text-[18px] leading-snug text-ff-primary-text underline-offset-4 hover:underline"
+      className="mt-1.5 px-4 py-2 rounded-[50px] bg-ff-secondary text-white text-xs font-bold shadow-sm hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5"
     >
-      {value}
+      <span>{btnText}</span>
+      <ChevronRight className="w-3.5 h-3.5" />
     </button>
-  ) : (
-    <p className="text-[18px] leading-snug text-ff-primary-text">{value}</p>
   );
+}
+
+function InfoLine({ label, value, href }) {
+  if (!value) return null;
+
+  const isUrl = String(value).startsWith('http://') || String(value).startsWith('https://');
+  const targetHref = href || (isUrl ? value : '');
+  const isSocialOrWeb = isUrl || (targetHref && !label.toLowerCase().includes('phone') && !label.toLowerCase().includes('email'));
 
   return (
-    <div className="pb-[10px]">
-      <p className="text-[20px] font-bold leading-snug text-ff-primary-text">{label}</p>
-      {content}
+    <div className="pb-3 border-b border-slate-100 last:border-b-0">
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      {isSocialOrWeb ? (
+        <SocialOrWebButton label={label} href={targetHref} />
+      ) : targetHref ? (
+        <div className="flex items-center justify-between gap-2 mt-1 flex-wrap">
+          <span className="text-sm font-semibold text-ff-primary-text">{value}</span>
+          <SocialOrWebButton label={label} href={targetHref} />
+        </div>
+      ) : (
+        <p className="text-sm font-medium text-ff-primary-text mt-0.5">{value}</p>
+      )}
     </div>
   );
 }
@@ -335,19 +364,19 @@ function ServiceTimesPanel({ serviceTimes, selected, onSelect }) {
   const entries = serviceTimes[selected] || [];
 
   return (
-    <div className="rounded-[20px] border border-ff-secondary bg-white px-[15px] py-[10px]">
-      <h2 className="text-[25px] font-bold leading-[1.5] text-ff-primary-text">Service Times</h2>
+    <div className="rounded-[24px] border border-ff-secondary bg-white p-5 shadow-sm">
+      <h2 className="text-xl font-bold text-ff-secondary mb-3 border-b border-slate-200 pb-2">Service Times</h2>
       <ChoiceChips
         options={Object.keys(serviceTimes)}
         selected={selected}
         onChanged={(val) => onSelect(val || 'Adults')}
-        className="mt-[10px]"
+        className="mt-2"
       />
-      <div className="mt-5">
+      <div className="mt-4 space-y-3">
         {entries.map(([title, time], index) => (
-          <div key={`${title}-${time}-${index}`} className="pb-[10px]">
-            {title && <p className="text-[20px] font-bold text-ff-primary-text">{title}</p>}
-            {time && <p className="text-[18px] text-ff-primary-text">{time}</p>}
+          <div key={`${title}-${time}-${index}`} className="pb-2 border-b border-slate-100 last:border-b-0">
+            {title && <p className="text-sm font-bold text-ff-secondary">{title}</p>}
+            {time && <p className="text-xs text-slate-600 font-medium mt-0.5">{time}</p>}
           </div>
         ))}
       </div>
@@ -361,11 +390,27 @@ function BranchInfoPanel({ branch, branchAddress }) {
     (branchAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(branchAddress)}` : '');
 
   return (
-    <div className="rounded-[20px] border border-ff-secondary bg-white px-[15px] py-[10px]">
-      <h2 className="text-[25px] font-bold leading-[1.5] text-ff-primary-text">Branch Information</h2>
-      <div className="mt-5">
-        <InfoLine label="Church Address" value={branchAddress} />
-        <InfoLine label="Church Office" value={branchAddress} />
+    <div className="rounded-[24px] border border-ff-secondary bg-white p-5 shadow-sm">
+      <h2 className="text-xl font-bold text-ff-secondary mb-4 border-b border-slate-200 pb-2">
+        Branch Information
+      </h2>
+      <div className="space-y-3">
+        {branchAddress && (
+          <div className="pb-3 border-b border-slate-100">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Church Address</p>
+            <p className="text-sm font-medium text-ff-primary-text mt-0.5 mb-2">{branchAddress}</p>
+            {mapUrl && (
+              <button
+                type="button"
+                onClick={() => launchUrl(mapUrl)}
+                className="px-4 py-2 rounded-[50px] bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5 shadow-sm"
+              >
+                <span>View Location Map</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
         <InfoLine label="Country" value={branch?.country} />
         <InfoLine label="Phone" value={branch?.phone_number || branch?.phoneNumber} href={branch?.phone_number ? `tel:${branch.phone_number}` : ''} />
         <InfoLine label="Email" value={branch?.email} href={branch?.email ? `mailto:${branch.email}` : ''} />
@@ -375,15 +420,6 @@ function BranchInfoPanel({ branch, branchAddress }) {
         <InfoLine label="Facebook" value={branch?.facebook} href={branch?.facebook} />
         <InfoLine label="YouTube" value={branch?.youtube} href={branch?.youtube} />
       </div>
-      {mapUrl && (
-        <button
-          type="button"
-          onClick={() => launchUrl(mapUrl)}
-          className="mt-2 h-[55px] w-[230px] rounded-[30px] bg-ff-secondary px-4 text-base font-bold text-white"
-        >
-          Visit
-        </button>
-      )}
     </div>
   );
 }
@@ -400,12 +436,31 @@ function GivingPanel({ branch }) {
   if (paymentRows.length === 0) return null;
 
   return (
-    <div className="rounded-[20px] border border-ff-secondary bg-white px-[15px] py-[10px]">
-      <h2 className="text-[25px] font-bold leading-[1.5] text-ff-primary-text">Giving Details</h2>
-      <div className="mt-5 space-y-[10px]">
-        {paymentRows.map(([label, value]) => (
-          <InfoLine key={label} label={label} value={value} href={String(value).startsWith('http') ? value : ''} />
-        ))}
+    <div className="rounded-[24px] border border-ff-secondary bg-white p-5 shadow-sm">
+      <h2 className="text-xl font-bold text-ff-secondary mb-4 border-b border-slate-200 pb-2">
+        Giving Details
+      </h2>
+      <div className="space-y-3">
+        {paymentRows.map(([label, value]) => {
+          const isUrl = String(value).startsWith('http://') || String(value).startsWith('https://');
+          return (
+            <div key={label} className="pb-3 border-b border-slate-100 last:border-b-0">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
+              {isUrl ? (
+                <button
+                  type="button"
+                  onClick={() => launchUrl(value)}
+                  className="mt-1.5 px-4 py-2 rounded-[50px] bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5 shadow-sm"
+                >
+                  <span>Pay via {label}</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <p className="text-sm font-medium text-ff-primary-text mt-0.5 whitespace-pre-line">{value}</p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -413,19 +468,24 @@ function GivingPanel({ branch }) {
 
 function PastorSection({ pastorImage, pastorBio }) {
   return (
-    <div className="flex flex-col gap-5 md:flex-row md:items-start">
-      <div className="min-h-[388px] flex-1 overflow-hidden rounded-[20px] border border-ff-secondary bg-gradient-to-b from-white to-ff-secondary shadow-[0_2px_4px_rgba(25,36,49,0.5)]">
-        <img
-          src={pastorImage}
-          alt="Branch pastoral leadership"
-          className="h-full min-h-[388px] w-full object-cover"
-        />
-      </div>
-      {pastorBio && (
-        <div className="flex-1 rounded-[20px] border border-ff-secondary bg-white/80 p-5 text-[15px] leading-relaxed text-ff-primary-text">
-          {pastorBio}
+    <div className="rounded-[24px] border border-ff-secondary bg-white p-6 shadow-sm">
+      <h2 className="text-xl font-bold text-ff-secondary mb-4 border-b border-slate-200 pb-3">
+        Pastoral Leadership
+      </h2>
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+        <div className="w-full md:w-64 h-72 rounded-[20px] overflow-hidden border border-slate-200 bg-slate-100 shrink-0 shadow-sm">
+          <img
+            src={pastorImage}
+            alt="Branch pastoral leadership"
+            className="w-full h-full object-cover object-top"
+          />
         </div>
-      )}
+        {pastorBio && (
+          <div className="flex-1 text-sm sm:text-base leading-relaxed text-slate-700 bg-slate-50 p-5 rounded-[20px] border border-slate-100">
+            {pastorBio}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -434,61 +494,68 @@ function SermonCard({ sermon }) {
   const url = getSermonUrl(sermon);
 
   return (
-    <button
-      type="button"
-      onClick={() => url && launchUrl(url)}
-      className="w-full rounded-[30px] border border-ff-secondary bg-white p-[15px] text-left shadow-[2px_2px_10px_rgba(25,36,49,0.35)]"
+    <div
+      className="w-full rounded-[20px] border border-ff-secondary/20 bg-white p-4 text-left shadow-sm hover:border-ff-secondary hover:shadow-md transition-all flex flex-col justify-between gap-2"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h4 className="text-[18px] font-bold leading-tight text-ff-primary-text">{getSermonTitle(sermon)}</h4>
-          {sermon.preacher && <p className="mt-1 text-[15px] text-ff-primary-text">{sermon.preacher}</p>}
+          <h4 className="text-base font-bold text-ff-secondary">{getSermonTitle(sermon)}</h4>
+          {sermon.preacher && <p className="text-xs text-ff-alternate font-semibold mt-0.5">{sermon.preacher}</p>}
         </div>
-        <span className="rounded-[15px] bg-ff-secondary px-3 py-2 text-sm font-bold text-ff-alternate">Watch</span>
+        {url && (
+          <button
+            type="button"
+            onClick={() => launchUrl(url)}
+            className="rounded-[50px] bg-ff-secondary px-3.5 py-1 text-xs font-bold text-white hover:bg-slate-800 transition-colors inline-flex items-center gap-1 shrink-0"
+          >
+            <span>Watch</span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        )}
       </div>
-      {sermon.description && <p className="mt-3 text-[15px] leading-snug text-ff-primary-text">{sermon.description}</p>}
-      {sermon.date && <p className="mt-3 text-sm text-ff-primary-text">{formatDateTime(sermon.date)}</p>}
-    </button>
+      {sermon.description && <p className="text-xs text-slate-600 line-clamp-2 mt-1">{sermon.description}</p>}
+      {sermon.date && <p className="text-[11px] font-semibold text-slate-400 mt-1">{formatDateTime(sermon.date)}</p>}
+    </div>
   );
 }
 
 function EventCard({ event }) {
-  const image = getEventImage(event);
   const eventUrl = event.location_link || event.locationLink;
 
   return (
-    <div className="overflow-hidden rounded-[30px] border border-ff-secondary bg-white shadow-sm">
-      {image && (
-        <img
-          src={image}
-          alt={event.title || 'Branch event'}
-          className="h-[190px] w-full object-cover"
-        />
-      )}
-      <div className="p-[15px]">
-        <div className="flex items-start justify-between gap-3">
-          <h4 className="text-[18px] font-bold leading-tight text-ff-primary-text">{event.title}</h4>
-          <span className="rounded-[15px] bg-ff-secondary px-3 py-2 text-sm font-bold text-ff-alternate">
+    <div className="rounded-[20px] border border-ff-secondary/30 bg-white p-4 transition-all hover:border-ff-secondary hover:shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span className="rounded-[50px] bg-ff-secondary text-white px-2.5 py-0.5 text-[11px] font-bold">
             {Number(event.price) > 0 ? `R${event.price}` : 'Free'}
           </span>
-        </div>
-        {event.description && <p className="mt-2 text-[15px] leading-snug text-ff-primary-text">{event.description}</p>}
-        <div className="mt-3 space-y-1 text-[15px] text-ff-primary-text">
           {(event.date_details || event.dateDetails || event.date) && (
-            <p>{event.date_details || event.dateDetails || formatDateTime(event.date)}</p>
+            <span className="text-xs font-bold text-ff-alternate">
+              {event.date_details || event.dateDetails || formatDateTime(event.date)}
+            </span>
           )}
-          {(event.time_details || event.timeDetails || event.time) && (
-            <p>{event.time_details || event.timeDetails || formatTime(event.time)}</p>
-          )}
-          {event.location && <p>{event.location}</p>}
         </div>
+        <h4 className="text-base font-bold text-ff-secondary truncate">{event.title}</h4>
+        {event.location && (
+          <p className="text-xs text-slate-500 truncate mt-0.5">{event.location}</p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <Link
+          to={`/event?id=${event.id}`}
+          className="px-4 py-2 rounded-[50px] bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors inline-flex items-center gap-1"
+        >
+          <span>Details</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
         {eventUrl && (
           <button
             type="button"
             onClick={() => launchUrl(eventUrl)}
-            className="mt-4 h-10 rounded-[30px] border border-ff-secondary px-4 text-sm font-bold text-ff-secondary"
+            className="px-3 py-2 rounded-[50px] border border-ff-secondary text-ff-secondary text-xs font-bold hover:bg-slate-50 transition-colors"
           >
-            View Location
+            Location
           </button>
         )}
       </div>
@@ -740,7 +807,7 @@ export function BranchTemplatePage() {
         </div>
       </div>
 
-      <div className="block lg:hidden w-[380px] max-w-[90%] mx-auto mt-[30px] h-[600px] rounded-[30px] border border-ff-secondary relative overflow-hidden shadow-lg bg-ff-primary">
+      <div className="block lg:hidden w-[92%] max-w-[500px] mx-auto mt-[20px] mb-[20px] h-[520px] sm:h-[600px] rounded-[30px] border border-ff-secondary relative overflow-hidden shadow-lg bg-ff-primary">
         {heroMobileImg && (
           <img
             src={heroMobileImg}

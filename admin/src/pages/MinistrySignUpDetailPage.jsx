@@ -4,40 +4,9 @@ import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'fireb
 import ChoiceDropdown from '../components/ui/ChoiceDropdown';
 import { useAuth } from '../auth/AuthProvider';
 import { firestore } from '../lib/firebase';
+import { processMinistryVolunteerEnrollment } from '../lib/volunteerEnrollment';
 
 const signUpAccessRoles = ['super_admin', 'global_editor', 'branch_editor', 'care_team'];
-const defaultMinistryTypeOptions = [
-  'General',
-  'Parking/Security',
-  'Transport',
-  'Intercessors',
-  'Camp Yolo',
-  'Women on the Move',
-  'Men of Dominion',
-  'Fire Conference',
-  'Be a Host',
-  'Super Kids',
-  'Youth',
-  'Young Adults',
-  'Couples',
-  'Singles',
-  'Super Man',
-  'Media/Sound',
-  'Ushers',
-  'Hospitality',
-];
-
-const defaultBranches = [
-  'Online',
-  'Mbabane',
-  'Siteki',
-  'Hlutsi',
-  'Ludzeludze',
-  'EMalahleni',
-  'Boksburg',
-  'Orange Farm',
-  'Lagos',
-];
 
 function whatsappUrl(rawCell) {
   if (!rawCell) return null;
@@ -156,6 +125,7 @@ function buildDraft(signUp) {
   return {
     name: signUp?.name || '',
     surname: signUp?.surname || '',
+    email: signUp?.email || signUp?.userEmail || '',
     cell: signUp?.cell || '',
     branch: signUp?.branch || '',
     type: normalizeType(signUp?.type),
@@ -253,11 +223,6 @@ export default function MinistrySignUpDetailPage() {
     label: branchLabel(branchDoc),
   }));
 
-  const ministryTypeOptions = useMemo(
-    () => defaultMinistryTypeOptions.map((option) => ({ id: option, label: option })),
-    []
-  );
-
   const assignedUserOptions = users.map((entry) => ({
     id: entry.id,
     label: entry.displayName || entry.name || entry.email || entry.id,
@@ -281,6 +246,7 @@ export default function MinistrySignUpDetailPage() {
       const payload = {
         name: draft.name.trim(),
         surname: draft.surname.trim(),
+        email: draft.email.trim().toLowerCase(),
         cell: draft.cell.trim(),
         branch: draft.branch.trim(),
         message: draft.message.trim(),
@@ -311,20 +277,26 @@ export default function MinistrySignUpDetailPage() {
 
     try {
       const nowIso = new Date().toISOString();
+      const enrollment = await processMinistryVolunteerEnrollment(firestore, signUp, user);
+
       const payload = {
         status: 'acknowledged',
         acknowledgedAt: serverTimestamp(),
-        acknowledgedBy: user?.uid || '',
+        acknowledgedBy: user?.displayName || user?.email || user?.uid || '',
+        addedToVolunteers: true,
+        volunteerUserId: enrollment.targetUserId || '',
         updatedAt: serverTimestamp(),
       };
       await setDoc(doc(firestore, 'signUps', signUp.id), payload, { merge: true });
       setSignUp((current) => ({
         ...current,
         status: 'acknowledged',
-        acknowledgedBy: user?.uid || current?.acknowledgedBy,
+        acknowledgedBy: payload.acknowledgedBy,
         acknowledgedAt: nowIso,
+        addedToVolunteers: true,
+        volunteerUserId: enrollment.targetUserId || current?.volunteerUserId,
       }));
-      setMessage('Ministry signup acknowledged.');
+      setMessage('Ministry signup acknowledged and person added to ministry volunteers!');
     } catch (err) {
       console.error('Error acknowledging signup:', err);
       setError('The ministry signup could not be acknowledged right now.');
@@ -450,7 +422,10 @@ export default function MinistrySignUpDetailPage() {
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Signup request</p>
                   <h2 className="mt-2 text-2xl font-semibold text-white">{personName(signUp)}</h2>
-                  <p className="mt-2 text-sm text-slate-400">Status: {status} · Submitted: {formatDate(signUp.date)}</p>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Status: {status} · Submitted: {formatDate(signUp.date)}
+                    {signUp.addedToVolunteers ? <span className="ml-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">Volunteer added</span> : null}
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {status !== 'acknowledged' && status !== 'contacted' && status !== 'completed' && (
@@ -460,7 +435,7 @@ export default function MinistrySignUpDetailPage() {
                       disabled={saving}
                       className="rounded-full bg-brand-gold px-5 py-3 text-sm font-bold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Acknowledge request
+                      Acknowledge & Add Volunteer
                     </button>
                   )}
                   {status !== 'contacted' && status !== 'completed' && (
@@ -493,6 +468,7 @@ export default function MinistrySignUpDetailPage() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <TextField label="Name" value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Name" />
                     <TextField label="Surname" value={draft.surname} onChange={(event) => setDraft((current) => ({ ...current, surname: event.target.value }))} placeholder="Surname" />
+                    <TextField label="Email address" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} placeholder="Email address" />
                     <div>
                       <TextField label="Cell" value={draft.cell} onChange={(event) => setDraft((current) => ({ ...current, cell: event.target.value }))} placeholder="Cell number" />
                       {(telUrl(draft.cell) || whatsappUrl(draft.cell)) && (
@@ -526,13 +502,7 @@ export default function MinistrySignUpDetailPage() {
                       placeholder={branchOptions.length ? 'Select branch' : 'No branches available'}
                       disabled={!branchOptions.length}
                     />
-                    <ChoiceDropdown
-                      label="Ministry"
-                      value={draft.type}
-                      onChange={(value) => setDraft((current) => ({ ...current, type: value }))}
-                      options={ministryTypeOptions}
-                      placeholder="Select ministry"
-                    />
+                    <TextField label="Requested Ministry" value={draft.type} readOnly placeholder="Requested ministry" />
                     <TextField label="Follow-up status" value={draft.followUpStatus} onChange={(event) => setDraft((current) => ({ ...current, followUpStatus: event.target.value }))} placeholder="Follow-up status" />
                   </div>
 
@@ -580,6 +550,7 @@ export default function MinistrySignUpDetailPage() {
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   <DetailItem label="Name" value={signUp.name} />
                   <DetailItem label="Surname" value={signUp.surname} />
+                  <DetailItem label="Email" value={signUp.email || signUp.userEmail} />
                   <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/50 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Cell</p>
                     <p className="mt-2 break-words text-sm leading-6 text-slate-200">{signUp.cell || '—'}</p>

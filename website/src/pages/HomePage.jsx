@@ -278,32 +278,38 @@ export function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex flex-col gap-3">
           {events.filter(isFutureEvent).length > 0 ? (
-            events.filter(isFutureEvent).slice(0, 3).map((event) => (
+            events.filter(isFutureEvent).slice(0, 4).map((event) => (
               <div
                 key={event.id}
-                className="bg-white rounded-[24px] border border-ff-secondary p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow"
+                className="bg-white rounded-[20px] border border-ff-secondary/30 hover:border-ff-secondary p-4 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">
-                    {event.category || 'Special Convocation'}
-                  </span>
-                  <h3 className="text-xl font-bold text-ff-secondary mt-1 mb-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">
+                      {event.category || event.branchName || event.branch_name || 'Church Event'}
+                    </span>
+                    {(event.dateDetails || event.date_details) && (
+                      <span className="text-xs text-slate-500 font-semibold">
+                        • {event.dateDetails || event.date_details}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-lg font-bold text-ff-secondary truncate">
                     {event.title || 'Church Gathering'}
                   </h3>
-                  <p className="text-sm text-slate-600 line-clamp-3 mb-6">
-                    {event.description || 'Join us for a dynamic encounter in the presence of God.'}
-                  </p>
+                  {event.location && (
+                    <p className="text-xs text-slate-500 truncate mt-0.5">
+                      Location: {event.location}
+                    </p>
+                  )}
                 </div>
 
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-500">
-                    {event.location || 'SSMI Campus'}
-                  </span>
+                <div className="flex items-center gap-2 shrink-0">
                   <Link
                     to={`/event?id=${event.id}`}
-                    className="text-xs font-bold text-ff-secondary hover:underline inline-flex items-center gap-1"
+                    className="px-4 py-2 rounded-[50px] bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors inline-flex items-center gap-1 shadow-sm"
                   >
                     <span>Details & Register</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -312,70 +318,52 @@ export function HomePage() {
               </div>
             ))
           ) : (
-            <>
-              <div className="bg-white rounded-[24px] border border-ff-secondary p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">
-                    Flagship Event
-                  </span>
-                  <h3 className="text-xl font-bold text-ff-secondary mt-1 mb-2">
-                    Annual Fire Conference
-                  </h3>
-                  <p className="text-sm text-slate-600 mb-6">
-                    Apostolic convocation of revelation, healing, and holy impartation with Apostle Bheki Thwala.
-                  </p>
+            <div className="flex flex-col gap-3">
+              <div className="bg-white rounded-[20px] border border-ff-secondary/30 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">Flagship Event</span>
+                  <h3 className="text-lg font-bold text-ff-secondary">Annual Fire Conference</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Apostolic convocation of revelation, healing, and holy impartation</p>
                 </div>
                 <Link
                   to="/fire-conference"
-                  className="py-2.5 rounded-[20px] bg-ff-secondary text-white text-center text-xs font-bold hover:bg-slate-800 inline-flex items-center justify-center gap-1"
+                  className="px-4 py-2 rounded-[50px] bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors inline-flex items-center gap-1 shrink-0"
                 >
                   <span>Register Free</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
 
-              <div className="bg-white rounded-[24px] border border-ff-secondary p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">
-                    Youth Convocation
-                  </span>
-                  <h3 className="text-xl font-bold text-ff-secondary mt-1 mb-2">
-                    Camp YOLO Retreat
-                  </h3>
-                  <p className="text-sm text-slate-600 mb-6">
-                    Annual 4-day summer youth adventure with night bonfire encounters and outdoor games.
-                  </p>
+              <div className="bg-white rounded-[20px] border border-ff-secondary/30 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">Youth Convocation</span>
+                  <h3 className="text-lg font-bold text-ff-secondary">Camp YOLO Retreat</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Annual 4-day summer youth adventure & bonfire encounters</p>
                 </div>
                 <Link
                   to="/camp-yolo"
-                  className="py-2.5 rounded-[20px] bg-ff-secondary text-white text-center text-xs font-bold hover:bg-slate-800 inline-flex items-center justify-center gap-1"
+                  className="px-4 py-2 rounded-[50px] bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors inline-flex items-center gap-1 shrink-0"
                 >
                   <span>Learn More</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
 
-              <div className="bg-white rounded-[24px] border border-ff-secondary p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">
-                    Men's Gathering
-                  </span>
-                  <h3 className="text-xl font-bold text-ff-secondary mt-1 mb-2">
-                    Superman Men’s Conference
-                  </h3>
-                  <p className="text-sm text-slate-600 mb-6">
-                    National brotherhood gathering focused on wealth creation, spiritual leadership, and fatherhood.
-                  </p>
+              <div className="bg-white rounded-[20px] border border-ff-secondary/30 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">Men's Gathering</span>
+                  <h3 className="text-lg font-bold text-ff-secondary">Superman Men’s Conference</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Brotherhood gathering focused on spiritual leadership & wealth</p>
                 </div>
                 <Link
                   to="/superman-conference"
-                  className="py-2.5 rounded-[20px] bg-ff-secondary text-white text-center text-xs font-bold hover:bg-slate-800 inline-flex items-center justify-center gap-1"
+                  className="px-4 py-2 rounded-[50px] bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors inline-flex items-center gap-1 shrink-0"
                 >
                   <span>View Details</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
-            </>
+            </div>
           )}
         </div>
       </section>

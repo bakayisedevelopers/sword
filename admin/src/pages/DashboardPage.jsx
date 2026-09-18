@@ -5,13 +5,27 @@ import { useAuth } from '../auth/AuthProvider';
 import { firestore } from '../lib/firebase';
 import { highestRole, roleLabel } from '../auth/roles';
 
+function isRawId(value) {
+  if (!value) return true;
+  const str = `${value}`.trim();
+  return !str || str === 'undefined' || /^[A-Za-z0-9_-]{20,}$/.test(str);
+}
+
 function displayNameFor(user, profile) {
   const profileName = `${profile?.name || ''} ${profile?.surname || ''}`.trim();
-  return profile?.displayName || profileName || user?.displayName || user?.email?.split('@')[0] || 'Admin';
+  let name = profile?.displayName || profileName || user?.displayName || user?.email?.split('@')[0] || 'Admin';
+  if (isRawId(name) || name === user?.uid) {
+    name = user?.email?.split('@')[0] || 'Admin';
+  }
+  return name;
 }
 
 function branchLabel(profile) {
-  return profile?.branch || 'No branch assigned';
+  const branch = profile?.branch_name || profile?.branch;
+  if (isRawId(branch) || branch === profile?.uid) {
+    return 'No branch assigned';
+  }
+  return branch;
 }
 
 function isManageAll(roles) {
@@ -66,16 +80,16 @@ function isPendingAccess(accessRequest) {
 
 function MetricCard({ label, value, to, className = '' }) {
   const content = (
-    <article className="relative overflow-hidden rounded-[1.4rem] border border-brand-gold/15 bg-[#111805] p-4 shadow-soft transition hover:border-brand-gold/35 hover:bg-[#172006] sm:p-5">
+    <article className="relative overflow-hidden rounded-[1.4rem] border border-brand-gold/15 bg-[#111805] p-4 shadow-soft transition hover:border-brand-gold/35 hover:bg-[#172006] sm:p-5 w-full min-w-0">
       <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(rgba(222,255,75,0.45)_1px,transparent_1px)] [background-size:16px_16px]" />
-      <div className="relative flex items-center justify-between gap-4">
-        <p className="text-xs font-semibold uppercase tracking-[.18em] text-brand-gold">{label}</p>
-        <p className="text-2xl font-bold text-white sm:text-3xl">{value}</p>
+      <div className="relative flex items-center justify-between gap-4 min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-[.18em] text-brand-gold truncate min-w-0">{label}</p>
+        <p className="text-2xl font-bold text-white sm:text-3xl shrink-0">{value}</p>
       </div>
     </article>
   );
 
-  return to ? <Link to={to} className={className}>{content}</Link> : <div className={className}>{content}</div>;
+  return to ? <Link to={to} className={`block w-full min-w-0 ${className}`}>{content}</Link> : <div className={`w-full min-w-0 ${className}`}>{content}</div>;
 }
 
 function QuickLink({ to, children }) {
@@ -227,33 +241,33 @@ export default function DashboardPage() {
   }, [canAccessBranches, canAccessEvents, canAccessPartners, canAccessRegistrations, canAccessRequests, canAccessSignUps, canAccessUsers, manageAll, roles, scopes]);
 
   return (
-    <main className="space-y-5 pb-8 sm:space-y-6">
-      <section className="relative overflow-hidden rounded-[2rem] border border-brand-gold/20 bg-[#111805] p-5 shadow-soft sm:p-8">
+    <main className="space-y-5 pb-8 sm:space-y-6 w-full min-w-0 overflow-x-hidden">
+      <section className="relative overflow-hidden rounded-[2rem] border border-brand-gold/20 bg-[#111805] p-5 shadow-soft sm:p-8 w-full min-w-0">
         <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(rgba(222,255,75,0.45)_1px,transparent_1px)] [background-size:18px_18px]" />
-        <div className="relative grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[.28em] text-brand-gold">{userName}</p>
-            <h2 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-white sm:text-4xl">{branchLabel(profile)}</h2>
+        <div className="relative grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end min-w-0">
+          <div className="min-w-0 break-words">
+            <p className="text-xs font-bold uppercase tracking-[.28em] text-brand-gold truncate">{userName}</p>
+            <h2 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-white sm:text-4xl break-words">{branchLabel(profile)}</h2>
           </div>
-          <div className="inline-flex rounded-full border border-brand-gold/30 bg-brand-gold/10 px-5 py-3 text-sm font-bold text-brand-gold">
+          <div className="inline-flex rounded-full border border-brand-gold/30 bg-brand-gold/10 px-5 py-3 text-sm font-bold text-brand-gold shrink-0 self-start lg:self-auto">
             {roleName}
           </div>
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-white/10 bg-brand-navy p-5 shadow-soft sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
+      <section className="rounded-[2rem] border border-white/10 bg-brand-navy p-5 shadow-soft sm:p-6 w-full min-w-0 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-4 min-w-0">
+          <div className="min-w-0">
             <p className="text-xs uppercase tracking-[.24em] text-brand-gold">Training</p>
-            <h3 className="mt-2 text-2xl font-semibold text-white">Admin tour</h3>
+            <h3 className="mt-2 text-2xl font-semibold text-white truncate">Admin tour</h3>
           </div>
-          <button type="button" disabled className="rounded-full border border-brand-gold/30 px-5 py-3 text-sm font-bold text-brand-gold opacity-70">
+          <button type="button" disabled className="rounded-full border border-brand-gold/30 px-5 py-3 text-sm font-bold text-brand-gold opacity-70 shrink-0">
             Training coming soon
           </button>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6 w-full min-w-0">
         {metricCards.map((metric, index) => (
           <MetricCard
             key={metric.label}
@@ -265,18 +279,18 @@ export default function DashboardPage() {
         ))}
       </section>
 
-      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6 w-full min-w-0 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0">
             <p className="text-xs uppercase tracking-[.24em] text-slate-400">Today</p>
-            <h3 className="mt-2 text-2xl font-semibold text-white">Simple branch overview</h3>
+            <h3 className="mt-2 text-2xl font-semibold text-white truncate">Simple branch overview</h3>
           </div>
-          <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">{manageAll ? 'Global view' : 'Branch view'}</span>
+          <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300 shrink-0">{manageAll ? 'Global view' : 'Branch view'}</span>
         </div>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
+        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 break-words">
           This home page gives a quick operational snapshot only. Use the navigation to work through requests, registrations, partners, events, branches, ministries, and media.
         </p>
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap gap-2 min-w-0">
           {canAccessRequests ? <QuickLink to="/workspace/requests">Requests</QuickLink> : null}
           {canAccessRegistrations ? <QuickLink to="/workspace/registrations">Registrations</QuickLink> : null}
           {canAccessSignUps ? <QuickLink to="/workspace/sign-ups">Sign-ups</QuickLink> : null}

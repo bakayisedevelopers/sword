@@ -247,7 +247,7 @@ export function EventPage() {
       ) : (
         <section className="w-[90%] max-w-[1200px] mx-auto mb-12">
           <div className="bg-white border border-ff-secondary rounded-[30px] overflow-hidden shadow-sm">
-            <div className="h-[360px] sm:h-[480px] w-full bg-slate-900 overflow-hidden relative">
+            <div className="h-[200px] sm:h-[400px] w-full bg-slate-900 overflow-hidden relative">
               <img
                 src={activeEvent.picture || activeEvent.image || activeEvent.poster || '/assets/images/events.png'}
                 alt={activeEvent.title || 'Event'}

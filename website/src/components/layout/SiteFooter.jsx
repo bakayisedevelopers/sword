@@ -11,6 +11,10 @@ import { FollowUpModal } from '../modals/FollowUpModal.jsx';
 export function SiteFooter() {
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
 
+  const handleLinkClick = () => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
   return (
     <footer id="site-footer" className="w-full py-8">
       {/* Footer Container */}
@@ -22,71 +26,77 @@ export function SiteFooter() {
             <div className="flex flex-col items-start gap-4">
               <button
                 type="button"
-                onClick={() => console.log('My Dashboard clicked')}
-                className="w-[150px] h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-sm border border-ff-secondary hover:bg-white/90 transition-colors"
+                onClick={() => {
+                  console.log('My Dashboard clicked');
+                  handleLinkClick();
+                }}
+                className="w-[150px] h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-sm border border-ff-secondary hover:bg-white/90 transition-colors shadow-sm"
               >
                 My Dashboard
               </button>
 
               <div className="flex flex-col gap-2 pt-2">
-                <Link to="/locations" className="text-xl font-bold text-white hover:text-white/80 transition-colors">
+                <Link to="/locations" onClick={handleLinkClick} className="text-xl font-bold text-white hover:text-white/80 transition-colors">
                   Locations
                 </Link>
-                <Link to="/watch" className="text-xl font-bold text-white hover:text-white/80 transition-colors">
+                <Link to="/watch" onClick={handleLinkClick} className="text-xl font-bold text-white hover:text-white/80 transition-colors">
                   Watch
                 </Link>
-                <Link to="/about-us" className="text-xl font-bold text-white hover:text-white/80 transition-colors">
+                <Link to="/about-us" onClick={handleLinkClick} className="text-xl font-bold text-white hover:text-white/80 transition-colors">
                   About
                 </Link>
-                <Link to="/care" className="text-xl font-bold text-white hover:text-white/80 transition-colors">
+                <Link to="/care" onClick={handleLinkClick} className="text-xl font-bold text-white hover:text-white/80 transition-colors">
                   Care
                 </Link>
-                <Link to="/give" className="text-xl font-bold text-white hover:text-white/80 transition-colors">
+                <Link to="/events" onClick={handleLinkClick} className="text-xl font-bold text-white hover:text-white/80 transition-colors">
+                  Events
+                </Link>
+                <Link to="/give" onClick={handleLinkClick} className="text-xl font-bold text-white hover:text-white/80 transition-colors">
                   Give
                 </Link>
               </div>
             </div>
 
-            {/* Column 2: Partner With Us & Family */}
+            {/* Column 2: Partner With Us */}
             <div className="flex flex-col items-start gap-4">
-              <h3 className="text-xl font-bold text-white tracking-wide">
+              <h3 className="text-xl font-bold text-white tracking-wide uppercase">
                 PARTNER WITH US
               </h3>
 
               {/* Adults Sub-section */}
               <div className="flex flex-col items-start gap-2">
-                <span className="bg-ff-primary text-ff-primary-text font-semibold text-sm px-3 py-1 rounded-r-lg">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
                   Adults
                 </span>
-                <Link to="/be-a-partner" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/be-a-partner" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Be a Partner
                 </Link>
-                <Link to="/ministries" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/ministries" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Ministries
                 </Link>
-                <Link to="/school-of-ministry" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/school-of-ministry" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   School of Ministry
                 </Link>
               </div>
 
               {/* For Your Family Sub-section */}
               <div className="flex flex-col items-start gap-2 pt-2">
-                <span className="bg-ff-primary text-ff-primary-text font-semibold text-sm px-3 py-1 rounded-r-lg">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
                   For Your Family
                 </span>
-                <Link to="/super-kids" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/super-kids" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   SuperKids
                 </Link>
-                <Link to="/youth" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/youth" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Youth
                 </Link>
-                <Link to="/couples" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/couples" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Couples
                 </Link>
-                <Link to="/for-men" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/for-men" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   For Men
                 </Link>
-                <Link to="/for-women" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/for-women" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   For Women
                 </Link>
               </div>
@@ -94,19 +104,19 @@ export function SiteFooter() {
 
             {/* Column 3: Get Care & Resources */}
             <div className="flex flex-col items-start gap-4">
-              <h3 className="text-xl font-bold text-white tracking-wide">
+              <h3 className="text-xl font-bold text-white tracking-wide uppercase">
                 GET CARE
               </h3>
 
               {/* Immediate Help Sub-section */}
               <div className="flex flex-col items-start gap-2">
-                <span className="bg-ff-primary text-ff-primary-text font-semibold text-sm px-3 py-1 rounded-r-lg">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
                   Immediate help
                 </span>
-                <Link to="/prayer" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/prayer" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Prayer
                 </Link>
-                <Link to="/counseling" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/counseling" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Counseling
                 </Link>
                 <button
@@ -120,19 +130,19 @@ export function SiteFooter() {
 
               {/* Resources Sub-section */}
               <div className="flex flex-col items-start gap-2 pt-2">
-                <span className="bg-ff-primary text-ff-primary-text font-semibold text-sm px-3 py-1 rounded-r-lg">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
                   Resources
                 </span>
-                <Link to="/e-resources-center" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/e-resources-center" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   e-Resource Centre
                 </Link>
-                <Link to="/watch" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/watch" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Sermons
                 </Link>
-                <Link to="/podcasts" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/podcasts" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Podcasts
                 </Link>
-                <Link to="/events" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/events" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Events
                 </Link>
               </div>
@@ -140,35 +150,35 @@ export function SiteFooter() {
 
             {/* Column 4: More & Conferences */}
             <div className="flex flex-col items-start gap-4">
-              <h3 className="text-xl font-bold text-white tracking-wide">
+              <h3 className="text-xl font-bold text-white tracking-wide uppercase">
                 MORE
               </h3>
 
               {/* Conferences Sub-section */}
               <div className="flex flex-col items-start gap-2">
-                <span className="bg-ff-primary text-ff-primary-text font-semibold text-sm px-3 py-1 rounded-r-lg">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
                   Conferences
                 </span>
-                <Link to="/fire-conference" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/fire-conference" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Fire Conference
                 </Link>
-                <Link to="/superman-conference" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/superman-conference" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Superman Conference
                 </Link>
-                <Link to="/camp-yolo" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/camp-yolo" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Camp Yolo
                 </Link>
               </div>
 
               {/* Others Sub-section */}
               <div className="flex flex-col items-start gap-2 pt-2">
-                <span className="bg-ff-primary text-ff-primary-text font-semibold text-sm px-3 py-1 rounded-r-lg">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
                   Others
                 </span>
-                <Link to="/contact-us" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/contact-us" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Contact Us
                 </Link>
-                <Link to="/privacy-policy" className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/privacy-policy" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Privacy Policy
                 </Link>
               </div>
@@ -179,7 +189,8 @@ export function SiteFooter() {
           <div className="pt-6 border-t border-white/20 flex items-center justify-between">
             <Link
               to="/socials"
-              className="px-6 py-2.5 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-sm hover:bg-white/90 transition-colors"
+              onClick={handleLinkClick}
+              className="px-6 py-2.5 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-sm hover:bg-white/90 transition-colors shadow-sm"
             >
               Social Links
             </Link>
@@ -190,67 +201,177 @@ export function SiteFooter() {
         </div>
 
         {/* MOBILE / TABLET LAYOUT (< 991px) */}
-        <div className="block lg:hidden w-full space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Mobile Column 1: Core Links */}
-            <div className="flex flex-col gap-2">
+        <div className="block lg:hidden w-full space-y-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {/* Mobile Column 1: Core Navigation */}
+            <div className="flex flex-col items-start gap-4">
               <button
                 type="button"
-                onClick={() => console.log('My Dashboard clicked')}
-                className="w-[140px] h-9 px-3 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-xs border border-ff-secondary mb-2"
+                onClick={() => {
+                  console.log('My Dashboard clicked');
+                  handleLinkClick();
+                }}
+                className="w-[140px] h-9 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-xs border border-ff-secondary hover:bg-white/90 transition-colors shadow-sm mb-1"
               >
                 My Dashboard
               </button>
-              <Link to="/locations" className="text-base font-bold text-white">Locations</Link>
-              <Link to="/watch" className="text-base font-bold text-white">Watch</Link>
-              <Link to="/about-us" className="text-base font-bold text-white">About</Link>
-              <Link to="/care" className="text-base font-bold text-white">Care</Link>
-              <Link to="/events" className="text-base font-bold text-white">Events</Link>
-              <Link to="/give" className="text-base font-bold text-white">Give</Link>
+
+              <div className="flex flex-col gap-2 pt-1">
+                <Link to="/locations" onClick={handleLinkClick} className="text-base font-bold text-white hover:text-white/80 transition-colors">
+                  Locations
+                </Link>
+                <Link to="/watch" onClick={handleLinkClick} className="text-base font-bold text-white hover:text-white/80 transition-colors">
+                  Watch
+                </Link>
+                <Link to="/about-us" onClick={handleLinkClick} className="text-base font-bold text-white hover:text-white/80 transition-colors">
+                  About
+                </Link>
+                <Link to="/care" onClick={handleLinkClick} className="text-base font-bold text-white hover:text-white/80 transition-colors">
+                  Care
+                </Link>
+                <Link to="/events" onClick={handleLinkClick} className="text-base font-bold text-white hover:text-white/80 transition-colors">
+                  Events
+                </Link>
+                <Link to="/give" onClick={handleLinkClick} className="text-base font-bold text-white hover:text-white/80 transition-colors">
+                  Give
+                </Link>
+              </div>
             </div>
 
-            {/* Mobile Column 2: Partner */}
-            <div className="flex flex-col gap-2">
-              <span className="text-base font-bold text-white tracking-wide">PARTNER WITH US</span>
-              <Link to="/be-a-partner" className="text-sm font-bold text-white/90">Be a Partner</Link>
-              <Link to="/ministries" className="text-sm font-bold text-white/90">Ministries</Link>
-              <Link to="/school-of-ministry" className="text-sm font-bold text-white/90">School of Ministry</Link>
-              <Link to="/super-kids" className="text-sm font-bold text-white/90">SuperKids</Link>
-              <Link to="/youth" className="text-sm font-bold text-white/90">Youth</Link>
+            {/* Mobile Column 2: PARTNER WITH US */}
+            <div className="flex flex-col items-start gap-4">
+              <h3 className="text-base font-bold text-white tracking-wide uppercase">
+                PARTNER WITH US
+              </h3>
+
+              {/* Adults Sub-section */}
+              <div className="flex flex-col items-start gap-2">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
+                  Adults
+                </span>
+                <Link to="/be-a-partner" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Be a Partner
+                </Link>
+                <Link to="/ministries" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Ministries
+                </Link>
+                <Link to="/school-of-ministry" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  School of Ministry
+                </Link>
+              </div>
+
+              {/* For Your Family Sub-section */}
+              <div className="flex flex-col items-start gap-2 pt-2">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
+                  For Your Family
+                </span>
+                <Link to="/super-kids" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  SuperKids
+                </Link>
+                <Link to="/youth" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Youth
+                </Link>
+                <Link to="/couples" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Couples
+                </Link>
+                <Link to="/for-men" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  For Men
+                </Link>
+                <Link to="/for-women" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  For Women
+                </Link>
+              </div>
             </div>
 
-            {/* Mobile Column 3: Care */}
-            <div className="flex flex-col gap-2">
-              <span className="text-base font-bold text-white tracking-wide">GET CARE</span>
-              <Link to="/prayer" className="text-sm font-bold text-white/90">Prayer</Link>
-              <Link to="/counseling" className="text-sm font-bold text-white/90">Counseling</Link>
-              <button
-                type="button"
-                onClick={() => setShowFollowUpModal(true)}
-                className="text-sm font-bold text-white/90 text-left"
-              >
-                Check Ins
-              </button>
-              <Link to="/e-resources-center" className="text-sm font-bold text-white/90">e-Resource Centre</Link>
-              <Link to="/events" className="text-sm font-bold text-white/90">Events</Link>
+            {/* Mobile Column 3: GET CARE */}
+            <div className="flex flex-col items-start gap-4">
+              <h3 className="text-base font-bold text-white tracking-wide uppercase">
+                GET CARE
+              </h3>
+
+              {/* Immediate Help Sub-section */}
+              <div className="flex flex-col items-start gap-2">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
+                  Immediate help
+                </span>
+                <Link to="/prayer" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Prayer
+                </Link>
+                <Link to="/counseling" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Counseling
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowFollowUpModal(true)}
+                  className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1 text-left"
+                >
+                  Check Ins
+                </button>
+              </div>
+
+              {/* Resources Sub-section */}
+              <div className="flex flex-col items-start gap-2 pt-2">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
+                  Resources
+                </span>
+                <Link to="/e-resources-center" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  e-Resource Centre
+                </Link>
+                <Link to="/watch" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Sermons
+                </Link>
+                <Link to="/podcasts" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Podcasts
+                </Link>
+                <Link to="/events" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Events
+                </Link>
+              </div>
             </div>
 
-            {/* Mobile Column 4: Conferences & Others */}
-            <div className="flex flex-col gap-2">
-              <span className="text-base font-bold text-white tracking-wide">CONFERENCES & MORE</span>
-              <Link to="/fire-conference" className="text-sm font-bold text-white/90">Fire Conference</Link>
-              <Link to="/superman-conference" className="text-sm font-bold text-white/90">Superman Conference</Link>
-              <Link to="/camp-yolo" className="text-sm font-bold text-white/90">Camp Yolo</Link>
-              <Link to="/contact-us" className="text-sm font-bold text-white/90">Contact Us</Link>
-              <Link to="/privacy-policy" className="text-sm font-bold text-white/90">Privacy Policy</Link>
+            {/* Mobile Column 4: MORE */}
+            <div className="flex flex-col items-start gap-4">
+              <h3 className="text-base font-bold text-white tracking-wide uppercase">
+                MORE
+              </h3>
+
+              {/* Conferences Sub-section */}
+              <div className="flex flex-col items-start gap-2">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
+                  Conferences
+                </span>
+                <Link to="/fire-conference" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Fire Conference
+                </Link>
+                <Link to="/superman-conference" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Superman Conference
+                </Link>
+                <Link to="/camp-yolo" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Camp Yolo
+                </Link>
+              </div>
+
+              {/* Others Sub-section */}
+              <div className="flex flex-col items-start gap-2 pt-2">
+                <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
+                  Others
+                </span>
+                <Link to="/contact-us" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Contact Us
+                </Link>
+                <Link to="/privacy-policy" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                  Privacy Policy
+                </Link>
+              </div>
             </div>
           </div>
 
           {/* Mobile Footer Bottom Bar */}
-          <div className="pt-4 border-t border-white/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="pt-6 border-t border-white/20 flex flex-col sm:flex-row items-center justify-between gap-4">
             <Link
               to="/socials"
-              className="px-5 py-2 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-xs"
+              onClick={handleLinkClick}
+              className="px-6 py-2.5 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-xs hover:bg-white/90 transition-colors shadow-sm"
             >
               Social Links
             </Link>

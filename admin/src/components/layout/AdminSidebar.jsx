@@ -85,7 +85,11 @@ export default function AdminSidebar({ open = false, onClose }) {
   const { user, profile, roles, signOut } = useAuth();
   const location = useLocation();
   const [openGroup, setOpenGroup] = useState('Inbox');
-  const profileLabel = user?.displayName || user?.email || (roles[0] ? `Role: ${roles[0]}` : 'Profile');
+  const profileName = `${profile?.name || ''} ${profile?.surname || ''}`.trim();
+  let nameLabel = profile?.displayName || profileName || user?.displayName || user?.email?.split('@')[0] || 'Admin';
+  if (nameLabel === user?.uid) {
+    nameLabel = user?.email?.split('@')[0] || 'Admin';
+  }
   const { badges } = useDerivedNotifications({ profile, roles });
 
   useEffect(() => {
@@ -149,7 +153,8 @@ export default function AdminSidebar({ open = false, onClose }) {
           <div className="rounded-[1.35rem] border border-white/10 bg-slate-900/80 px-4 py-3 transition hover:border-brand-gold/40 hover:bg-brand-gold/10">
             <div className="flex items-center justify-between gap-3">
               <NavLink to="/profile" onClick={onClose} className="min-w-0 flex-1 text-left">
-                <span className="block truncate text-sm font-semibold text-white">{profileLabel}</span>
+                <span className="block truncate text-sm font-semibold text-white">{nameLabel}</span>
+                {user?.email ? <span className="block truncate text-xs text-slate-400 mt-0.5">{user.email}</span> : null}
               </NavLink>
               <button
                 type="button"

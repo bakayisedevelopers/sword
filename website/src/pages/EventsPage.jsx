@@ -100,7 +100,7 @@ export function EventsPage() {
       </div>
 
       {/* 1B. Mobile Hero (< 991px) */}
-      <div className="block lg:hidden w-[92%] max-w-[420px] mx-auto mt-[20px] mb-[20px] h-[520px] rounded-[30px] border border-ff-secondary relative overflow-hidden shadow-lg">
+      <div className="block lg:hidden w-[380px] max-w-[90%] mx-auto mt-[30px] mb-[20px] h-[600px] rounded-[30px] border border-ff-secondary relative overflow-hidden shadow-lg">
         <img
           src="/assets/images/events.png"
           alt="Events Banner Mobile"
@@ -108,7 +108,7 @@ export function EventsPage() {
         />
 
         {/* Embedded Mobile Header */}
-        <div className="relative z-10 w-full p-3">
+        <div className="relative z-10 w-full p-4">
           <div className="w-full bg-ff-secondary rounded-[20px] p-2.5 flex items-center justify-between border border-transparent shadow-[0_0_30px_rgba(25,36,49,0.5)]">
             <Link
               to="/"
@@ -185,64 +185,59 @@ export function EventsPage() {
           </div>
         </div>
 
-        {/* Events Grid */}
+        {/* Events Row List */}
         {loading ? (
-          <div className="py-20 text-center text-slate-500">Loading events...</div>
+          <div className="py-20 text-center text-slate-500 font-medium">Loading events...</div>
         ) : filteredEvents.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="flex flex-col gap-4">
             {filteredEvents.map((ev) => (
               <div
                 key={ev.id}
-                className="bg-white border border-ff-secondary rounded-[24px] overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group"
+                className="bg-white border border-ff-secondary/30 hover:border-ff-secondary rounded-[24px] p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
               >
-                <div className="h-52 bg-slate-100 overflow-hidden relative">
-                  <img
-                    src={ev.image || ev.poster || '/assets/images/events.png'}
-                    alt={ev.title || 'Event'}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  {(ev.branch_name || ev.branchName) && (
-                    <span className="absolute top-3 right-3 px-3 py-1 rounded-[50px] bg-ff-secondary/80 backdrop-blur-sm text-white text-xs font-bold">
-                      {ev.branch_name || ev.branchName}
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {(ev.branch_name || ev.branchName) && (
+                      <span className="px-3 py-0.5 rounded-[50px] bg-ff-secondary text-white text-xs font-bold">
+                        {ev.branch_name || ev.branchName}
+                      </span>
+                    )}
+                    <span className="text-xs text-ff-alternate font-bold uppercase tracking-wider">
+                      {ev.dateDetails || 'Upcoming'} {ev.timeDetails ? `| ${ev.timeDetails}` : ''}
                     </span>
+                  </div>
+
+                  <h3 className="text-lg sm:text-xl font-bold text-ff-secondary group-hover:text-ff-alternate transition-colors">
+                    {ev.title}
+                  </h3>
+
+                  {ev.location && (
+                    <p className="text-xs text-slate-500 font-medium">
+                      Location: {ev.location}
+                    </p>
                   )}
                 </div>
 
-                <div className="p-6 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="text-xl font-bold text-ff-secondary line-clamp-2">
-                      {ev.title}
-                    </h3>
-                    <p className="text-xs text-ff-alternate font-bold uppercase tracking-wider mt-1 mb-3">
-                      {ev.dateDetails || 'Upcoming'} {ev.timeDetails ? `| ${ev.timeDetails}` : ''}
-                    </p>
-                    {ev.description && (
-                      <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
-                        {ev.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex gap-3">
-                    <Link
-                      to={`/event?id=${ev.id}`}
-                      className="flex-1 py-2.5 rounded-[50px] bg-ff-secondary text-white text-center text-xs font-bold hover:bg-slate-800 transition-colors"
-                    >
-                      View Details
-                    </Link>
-                    <Link
-                      to={`/register?event=${encodeURIComponent(ev.title || ev.id)}`}
-                      className="flex-1 py-2.5 rounded-[50px] border border-ff-secondary text-ff-secondary text-center text-xs font-bold hover:bg-slate-100 transition-colors"
-                    >
-                      Register
-                    </Link>
-                  </div>
+                <div className="flex items-center gap-3 shrink-0 pt-2 sm:pt-0">
+                  <Link
+                    to={`/event?id=${ev.id}`}
+                    className="px-5 py-2.5 rounded-[50px] bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors inline-flex items-center gap-1 shadow-sm"
+                  >
+                    <span>View Details</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                  <Link
+                    to={`/register?event=${encodeURIComponent(ev.title || ev.id)}`}
+                    className="px-5 py-2.5 rounded-[50px] border border-ff-secondary text-ff-secondary text-xs font-bold hover:bg-slate-50 transition-colors"
+                  >
+                    Register
+                  </Link>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="py-20 text-center text-slate-500">
+          <div className="py-20 text-center text-slate-500 font-medium">
             No events scheduled for {selectedBranch === 'All' ? 'any branch' : `${selectedBranch} Branch`} at this time.
           </div>
         )}
