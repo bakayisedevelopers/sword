@@ -35,6 +35,57 @@ function previewPathFor(topic) {
   return `${route}${route.includes('?') ? '&' : '?'}helpPreview=1`;
 }
 
+const previewFrames = [
+  {
+    id: 'desktop',
+    label: 'Desktop preview',
+    wrapperClass: 'hidden lg:block h-[600px] w-[960px]',
+    width: 1280,
+    height: 800,
+    scale: 0.75,
+  },
+  {
+    id: 'tablet',
+    label: 'Tablet preview',
+    wrapperClass: 'hidden sm:block lg:hidden h-[800px] w-[600px]',
+    width: 768,
+    height: 1024,
+    scale: 0.78125,
+  },
+  {
+    id: 'mobile',
+    label: 'Mobile preview',
+    wrapperClass: 'block sm:hidden h-[720px] w-[360px]',
+    width: 390,
+    height: 780,
+    scale: 0.9230769231,
+  },
+];
+
+function PreviewFrame({ frame, previewPath, topic }) {
+  return (
+    <div
+      className={`mx-auto max-w-full overflow-hidden rounded-[1.35rem] border border-white/10 bg-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.35)] ${frame.wrapperClass}`}
+      aria-label={frame.label}
+    >
+      <iframe
+        key={`${topic.id}-${frame.id}`}
+        src={previewPath}
+        title={`${topic.title} ${frame.label}`}
+        width={frame.width}
+        height={frame.height}
+        className="block origin-top-left border-0"
+        style={{
+          width: `${frame.width}px`,
+          height: `${frame.height}px`,
+          transform: `scale(${frame.scale})`,
+        }}
+        loading="lazy"
+      />
+    </div>
+  );
+}
+
 function TopicLivePreview({ topic }) {
   const previewPath = previewPathFor(topic);
   return (
@@ -46,17 +97,11 @@ function TopicLivePreview({ topic }) {
         </figcaption>
       </div>
       <div className="bg-[#080b05] p-4 sm:p-6">
-        <div className="mx-auto aspect-[16/10] w-full max-w-[960px] overflow-hidden rounded-[1.35rem] border border-white/10 bg-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-          <iframe
-            key={topic.id}
-            src={previewPath}
-            title={`${topic.title} live preview`}
-            className="h-full w-full border-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-            loading="lazy"
-          />
-        </div>
+        {previewFrames.map((frame) => (
+          <PreviewFrame key={frame.id} frame={frame} previewPath={previewPath} topic={topic} />
+        ))}
         <p className="mx-auto mt-3 max-w-[960px] text-xs leading-5 text-slate-500">
-          This preview uses the live admin route in a smaller laptop-style frame. It is scrollable inside the frame while browser scroll bars are hidden where supported.
+          This preview uses the live admin route. Desktop, tablet, and mobile screen sizes are rendered with fixed internal viewport sizes and scaled down to fit this guide.
         </p>
       </div>
     </figure>
