@@ -558,12 +558,10 @@ export default function BranchWorkspacePage() {
   useEffect(() => {
     if (!selectedBranch) {
       setDraft({ ...emptyBranchDraft, ...emptyContentDraft });
-      setHeroAssets({ ...emptyHeroAssets });
       return;
     }
 
     setDraft(buildEditorDraft(selectedBranch));
-    setHeroAssets({ ...emptyHeroAssets });
   }, [selectedBranch]);
 
   if (!canAccessBranches) {
