@@ -31,12 +31,19 @@ function eventTitle(eventDoc) {
   return eventDoc?.title || 'Untitled event';
 }
 
-function toDateTimeInput(value) {
+function toDateInput(value) {
   if (!value) return '';
   const date = typeof value?.toDate === 'function' ? value.toDate() : new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return offsetDate.toISOString().slice(0, 16);
+  return offsetDate.toISOString().slice(0, 10);
+}
+
+function toTimeInput(value) {
+  if (!value) return '';
+  const date = typeof value?.toDate === 'function' ? value.toDate() : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
 function dateTimeOrNull(value) {
@@ -45,14 +52,36 @@ function dateTimeOrNull(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function timeParts(value) {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const match = value.match(/^(\d{2}):(\d{2})$/);
+    if (match) {
+      return { hours: Number(match[1]), minutes: Number(match[2]) };
+    }
+  }
+
+  const parsed = dateTimeOrNull(value);
+  return parsed ? { hours: parsed.getHours(), minutes: parsed.getMinutes() } : null;
+}
+
+function combineDateAndTime(baseDate, timeValue) {
+  const date = new Date(baseDate);
+  const parts = timeParts(timeValue);
+  if (parts) {
+    date.setHours(parts.hours, parts.minutes, 0, 0);
+  }
+  return date;
+}
+
 function buildDraft(eventDoc) {
   const pin = normalizeGeoPoint(eventDoc?.locationPIN);
 
   return {
     title: eventDoc?.title || '',
     description: eventDoc?.description || '',
-    date: toDateTimeInput(eventDoc?.date),
-    time: toDateTimeInput(eventDoc?.time),
+    date: toDateInput(eventDoc?.date),
+    time: toTimeInput(eventDoc?.time || eventDoc?.date),
     booking: Boolean(eventDoc?.booking),
     picture: eventDoc?.picture || '',
     global: Boolean(eventDoc?.global),
@@ -481,7 +510,7 @@ export default function EventDetailPage() {
       const ministryNameValue = scopedDraft.mininstryName.trim() || ministryDoc?.name || ministryDoc?.ministryName || '';
       const contactDoc = users.find((profileDoc) => profileDoc.id === scopedDraft.contactPersonId);
       const date = dateTimeOrNull(scopedDraft.date);
-      const time = dateTimeOrNull(scopedDraft.time);
+      const time = date && scopedDraft.time ? combineDateAndTime(date, scopedDraft.time) : null;
       const locationPinLat = Number.parseFloat(scopedDraft.locationPinLat);
       const locationPinLng = Number.parseFloat(scopedDraft.locationPinLng);
 
@@ -537,7 +566,7 @@ export default function EventDetailPage() {
         updatedBy: user?.uid || '',
       };
 
-      if (date) payload.date = date;
+      if (date) payload.date = scopedDraft.time ? combineDateAndTime(date, scopedDraft.time) : date;
       if (time) payload.time = time;
       if (Number.isFinite(locationPinLat) && Number.isFinite(locationPinLng)) {
         payload.locationPIN = new GeoPoint(locationPinLat, locationPinLng);
@@ -682,8 +711,8 @@ export default function EventDetailPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <TextField label="Title" value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} readOnly={!canEdit} />
                 <TextField label="Picture URL" value={draft.picture} onChange={(event) => setDraft((current) => ({ ...current, picture: event.target.value }))} readOnly={!canEdit} />
-                <TextField label="Event date" type="datetime-local" value={draft.date} onChange={(event) => setDraft((current) => ({ ...current, date: event.target.value }))} readOnly={!canEdit} />
-                <TextField label="Event time" type="datetime-local" value={draft.time} onChange={(event) => setDraft((current) => ({ ...current, time: event.target.value }))} readOnly={!canEdit} />
+                <TextField label="Event date" type="date" value={draft.date} onChange={(event) => setDraft((current) => ({ ...current, date: event.target.value }))} readOnly={!canEdit} />
+                <TextField label="Event time" type="time" value={draft.time} onChange={(event) => setDraft((current) => ({ ...current, time: event.target.value }))} readOnly={!canEdit} />
                 <TextField label="Date details" value={draft.date_details} onChange={(event) => setDraft((current) => ({ ...current, date_details: event.target.value }))} readOnly={!canEdit} />
                 <TextField label="Time details" value={draft.time_details} onChange={(event) => setDraft((current) => ({ ...current, time_details: event.target.value }))} readOnly={!canEdit} />
                 <div className="space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4 md:col-span-2">

@@ -234,11 +234,24 @@ function toDateInputValue(date) {
   return offsetDate.toISOString().slice(0, 10);
 }
 
+function timeParts(value) {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const match = value.match(/^(\d{2}):(\d{2})$/);
+    if (match) {
+      return { hours: Number(match[1]), minutes: Number(match[2]) };
+    }
+  }
+
+  const parsed = dateTimeOrNull(value);
+  return parsed ? { hours: parsed.getHours(), minutes: parsed.getMinutes() } : null;
+}
+
 function combineDateAndTime(baseDate, timeValue) {
   const date = new Date(baseDate);
-  const time = dateTimeOrNull(timeValue);
-  if (time) {
-    date.setHours(time.getHours(), time.getMinutes(), 0, 0);
+  const parts = timeParts(timeValue);
+  if (parts) {
+    date.setHours(parts.hours, parts.minutes, 0, 0);
   }
   return date;
 }
@@ -303,7 +316,7 @@ function buildCreatePayload(draft, user, branches, users, ministries) {
   const ministryDoc = ministries.find((ministry) => ministry.id === draft.ministryId);
   const contactDoc = users.find((profile) => profile.id === draft.contactPersonId);
   const date = dateTimeOrNull(draft.date);
-  const time = dateTimeOrNull(draft.time);
+  const time = date && draft.time ? combineDateAndTime(date, draft.time) : null;
   const locationPinLat = Number.parseFloat(draft.locationPinLat);
   const locationPinLng = Number.parseFloat(draft.locationPinLng);
   const ministryNameValue = draft.mininstryName.trim() || ministryDoc?.name || ministryDoc?.ministryName || '';
@@ -343,7 +356,7 @@ function buildCreatePayload(draft, user, branches, users, ministries) {
     updatedBy: user?.uid || '',
   };
 
-  if (date) payload.date = date;
+  if (date) payload.date = draft.time ? combineDateAndTime(date, draft.time) : date;
   if (time) payload.time = time;
   if (Number.isFinite(locationPinLat) && Number.isFinite(locationPinLng)) {
     payload.locationPIN = new GeoPoint(locationPinLat, locationPinLng);
@@ -710,10 +723,8 @@ export default function EventsWorkspacePage() {
             <div className="grid gap-4 md:grid-cols-2">
               <TextField label="Title" value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} placeholder="Event title" />
               <TextField label="Picture URL" value={draft.picture} onChange={(event) => setDraft((current) => ({ ...current, picture: event.target.value }))} placeholder="Image URL" />
-              <TextField label="Event date" type="datetime-local" value={draft.date} onChange={(event) => setDraft((current) => ({ ...current, date: event.target.value }))} />
-              <TextField label="Event time" type="datetime-local" value={draft.time} onChange={(event) => setDraft((current) => ({ ...current, time: event.target.value }))} />
-              <TextField label="Date details" value={draft.date_details} onChange={(event) => setDraft((current) => ({ ...current, date_details: event.target.value }))} placeholder="e.g. Every Sunday / 14-16 June" />
-              <TextField label="Time details" value={draft.time_details} onChange={(event) => setDraft((current) => ({ ...current, time_details: event.target.value }))} placeholder="e.g. 09:00 AM / Doors open 18:00" />
+              <TextField label="Event date" type="date" value={draft.date} onChange={(event) => setDraft((current) => ({ ...current, date: event.target.value }))} />
+              <TextField label="Event time" type="time" value={draft.time} onChange={(event) => setDraft((current) => ({ ...current, time: event.target.value }))} />
               <div className="space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4 md:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

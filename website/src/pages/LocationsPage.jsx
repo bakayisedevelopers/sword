@@ -10,6 +10,16 @@ import { formatBranchSlug } from '../lib/format.js';
 import { launchUrl } from '../lib/urls.js';
 import { ChevronRight } from '../components/common/Icons.jsx';
 
+function textValue(value = '') {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value.path === 'string') return value.path.split('/').pop() || value.path;
+  if (typeof value.id === 'string') return value.id;
+  if (typeof value.name === 'string') return value.name;
+  return '';
+}
+
 /**
  * LocationsPage migrating LocationsWidget:
  * flutter-website/lib/main_pages/locations/locations_widget.dart
@@ -35,7 +45,7 @@ export function LocationsPage() {
   // Alphabetical sort matching Flutter line 102:
   // left.name.toLowerCase().compareTo(right.name.toLowerCase())
   const branches = [...(rawBranches || [])].sort((a, b) =>
-    (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase())
+    textValue(a.name).toLowerCase().localeCompare(textValue(b.name).toLowerCase())
   );
 
   const navItems = [
@@ -237,9 +247,11 @@ export function LocationsPage() {
             <div className="divide-y divide-slate-200">
               {branches.map((branch) => {
                 const slug = formatBranchSlug(branch);
-                const isOnline = (branch.name || '').trim().toLowerCase() === 'online';
+                const branchName = textValue(branch.name).trim();
+                const branchLocation = textValue(branch.location).trim();
+                const isOnline = branchName.toLowerCase() === 'online';
                 const hasDirections =
-                  !isOnline && (Boolean(branch.locationPIN) || Boolean(branch.location && branch.location.trim()));
+                  !isOnline && (Boolean(branch.locationPIN) || Boolean(branchLocation));
 
                 const openDirections = (event) => {
                   event.preventDefault();
@@ -251,8 +263,8 @@ export function LocationsPage() {
                     launchUrl(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`);
                     return;
                   }
-                  if (branch.location && branch.location.trim()) {
-                    launchUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(branch.location.trim())}`);
+                  if (branchLocation) {
+                    launchUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(branchLocation)}`);
                   }
                 };
 
@@ -264,11 +276,11 @@ export function LocationsPage() {
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-lg font-bold text-ff-secondary">
-                        {branch.name || 'Branch'}
+                        {branchName || 'Branch'}
                       </span>
-                      {(branch.country || branch.location) && (
+                      {(branch.country || branchLocation) && (
                         <span className="mt-0.5 block truncate text-sm text-slate-500">
-                          {[branch.country, branch.location].filter(Boolean).join(' · ')}
+                          {[textValue(branch.country), branchLocation].filter(Boolean).join(' · ')}
                         </span>
                       )}
                     </span>

@@ -19,8 +19,18 @@ export function valueOrDefault(value, defaultValue) {
  */
 export function formatBranchSlug(branch) {
   if (!branch) return '';
-  const storedSlug = (branch.snapshotData?.slug || branch.slug || '').trim();
-  const source = storedSlug.length > 0 ? storedSlug : (branch.name || '');
+  const toText = (value = '') => {
+    if (value == null) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (typeof value.path === 'string') return value.path.split('/').pop() || value.path;
+    if (typeof value.id === 'string') return value.id;
+    if (typeof value.name === 'string') return value.name;
+    return '';
+  };
+
+  const storedSlug = toText(branch.snapshotData?.slug || branch.slug).trim();
+  const source = storedSlug.length > 0 ? storedSlug : toText(branch.name);
   return source
     .trim()
     .toLowerCase()

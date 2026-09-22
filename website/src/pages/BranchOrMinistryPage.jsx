@@ -5,8 +5,18 @@ import { COLLECTIONS } from '../lib/firestore.js';
 import { BranchTemplatePage, OFFICIAL_BRANCHES, resolveCanonicalBranchSlug } from './BranchTemplatePage.jsx';
 import { MinistryPage } from './MinistryPage.jsx';
 
+function textValue(value = '') {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value.path === 'string') return value.path.split('/').pop() || value.path;
+  if (typeof value.id === 'string') return value.id;
+  if (typeof value.name === 'string') return value.name;
+  return '';
+}
+
 function normalize(val = '') {
-  return val
+  return textValue(val)
     .trim()
     .toLowerCase()
     .replace(/&/g, 'and')
@@ -38,7 +48,7 @@ export function BranchOrMinistryPage() {
 
   // 2. Check if slug matches a database branch document
   const isDbBranch = branches.some((b) => {
-    const bSlug = resolveCanonicalBranchSlug(b.slug || b.name || b.id || '');
+    const bSlug = resolveCanonicalBranchSlug(textValue(b.slug || b.name || b.id));
     return (
       bSlug === canonicalBranch ||
       normalize(b.slug || '') === normalizedSlug ||

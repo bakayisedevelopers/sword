@@ -175,8 +175,18 @@ export const OFFICIAL_BRANCHES = [
   },
 ];
 
+function textValue(value = '') {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value.path === 'string') return value.path.split('/').pop() || value.path;
+  if (typeof value.id === 'string') return value.id;
+  if (typeof value.name === 'string') return value.name;
+  return '';
+}
+
 function normalizeSlug(value = '') {
-  return value
+  return textValue(value)
     .trim()
     .toLowerCase()
     .replace(/&/g, 'and')
@@ -214,7 +224,8 @@ const DEFAULT_SERVICE_TIMES = {
 };
 
 function getImageValue(value) {
-  return typeof value === 'string' && value.trim() ? value.trim() : '';
+  const clean = textValue(value).trim();
+  return clean || '';
 }
 
 function getBranchImage(branch, landing) {
@@ -330,13 +341,15 @@ function sameBranchReference(recordRef, branch) {
 }
 
 function branchMatchesName(value, targetBranchNameOrSlug) {
-  if (!value || !targetBranchNameOrSlug) return false;
-  const canonicalValue = resolveCanonicalBranchSlug(value);
-  const canonicalTarget = resolveCanonicalBranchSlug(targetBranchNameOrSlug);
+  const cleanValue = textValue(value);
+  const cleanTarget = textValue(targetBranchNameOrSlug);
+  if (!cleanValue || !cleanTarget) return false;
+  const canonicalValue = resolveCanonicalBranchSlug(cleanValue);
+  const canonicalTarget = resolveCanonicalBranchSlug(cleanTarget);
   if (canonicalValue && canonicalTarget && canonicalValue === canonicalTarget) {
     return true;
   }
-  return normalizeSlug(value).replace(/-/g, '') === normalizeSlug(targetBranchNameOrSlug).replace(/-/g, '');
+  return normalizeSlug(cleanValue).replace(/-/g, '') === normalizeSlug(cleanTarget).replace(/-/g, '');
 }
 
 function getEventImage(event) {
@@ -775,7 +788,7 @@ export function BranchTemplatePage() {
         item.snapshotData?.slug,
         item.id,
         item.name,
-        item.website ? item.website.replace(/^\/+/, '') : '',
+        textValue(item.website).replace(/^\/+/, ''),
       ].filter(Boolean);
 
       return candidates.some((candidate) => {
@@ -811,8 +824,8 @@ export function BranchTemplatePage() {
 
     return {
       ...matched,
-      name: (matched.name || officialFallback?.name || matched.id || '').trim(),
-      slug: (matched.slug || officialFallback?.slug || matched.id || '').trim(),
+      name: textValue(matched.name || officialFallback?.name || matched.id).trim(),
+      slug: textValue(matched.slug || officialFallback?.slug || matched.id).trim(),
       country: matched.country || officialFallback?.country || '',
       location: matched.location || officialFallback?.defaultLocation || '',
       Image: matched.Image || matched.image || officialFallback?.defaultImage || '',
@@ -831,12 +844,12 @@ export function BranchTemplatePage() {
   );
 
   const landing = branch?.landingPage || branch?.snapshotData?.landingPage || {};
-  const branchName = branch?.name?.trim() || '';
-  const branchAddress = branch?.location?.trim() || '';
+  const branchName = textValue(branch?.name).trim();
+  const branchAddress = textValue(branch?.location).trim();
   const heroDesktopImg = branch ? getBranchImage(branch, landing) : '';
   const heroMobileImg = getImageValue(landing.heroMobileImage || landing.heroImage) || heroDesktopImg;
   const heroVideoUrl = getHeroVideoUrl(landing);
-  const showHeroVideo = (landing.heroMediaType || '').toLowerCase() === 'video' && heroVideoUrl;
+  const showHeroVideo = textValue(landing.heroMediaType).toLowerCase() === 'video' && heroVideoUrl;
   const pastorImg = getPastorImage(landing, officialFallback);
   const pastorBio = getPastorBio(landing, officialFallback);
   const serviceTimes = normalizeServiceTimes(
