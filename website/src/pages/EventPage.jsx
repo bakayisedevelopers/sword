@@ -44,7 +44,6 @@ export function EventPage() {
   const [regCell, setRegCell] = useState('');
   const [regBranch, setRegBranch] = useState('');
   const [regAdditionalAttendees, setRegAdditionalAttendees] = useState([]);
-  const [regMessage, setRegMessage] = useState('');
   const [regSubmitting, setRegSubmitting] = useState(false);
   const [regSuccess, setRegSuccess] = useState(false);
   const [regError, setRegError] = useState('');
@@ -160,11 +159,8 @@ export function EventPage() {
       window.scrollTo(0, 0);
     }
 
-    if (activeEvent?.title) {
-      setRegMessage(`Hi SSMI, I would like to register for ${activeEvent.title}.`);
-      if (activeEvent.branchName || activeEvent.branch_name) {
-        setRegBranch(activeEvent.branchName || activeEvent.branch_name);
-      }
+    if (activeEvent?.title && (activeEvent.branchName || activeEvent.branch_name)) {
+      setRegBranch(activeEvent.branchName || activeEvent.branch_name);
     }
   }, [activeEvent]);
 
@@ -251,7 +247,7 @@ export function EventPage() {
       if (extraNeeded <= 0) return [];
       const updated = [...prev];
       while (updated.length < extraNeeded) {
-        updated.push({ name: '', surname: '', email: '', cell: '' });
+        updated.push({ name: '', surname: '', email: '', cell: '', branch: '' });
       }
       return updated.slice(0, extraNeeded);
     });
@@ -276,8 +272,8 @@ export function EventPage() {
 
     for (let i = 0; i < regAdditionalAttendees.length; i++) {
       const att = regAdditionalAttendees[i];
-      if (!att.name.trim() || !att.surname.trim() || !att.email.trim()) {
-        setRegError(`Please fill in Name, Surname, and Email Address for Attendee #${i + 2}.`);
+      if (!att.name.trim() || !att.surname.trim() || !att.email.trim() || !att.branch) {
+        setRegError(`Please fill in Name, Surname, Email Address, and Branch for Attendee #${i + 2}.`);
         return;
       }
     }
@@ -292,6 +288,15 @@ export function EventPage() {
       const bookingRef = `BK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
       const eventId = activeEvent?.id || cleanIdOrTitle || '';
+      const eventName = activeEvent?.title || 'Event';
+      const primaryDescription = [
+        `${regName.trim()} ${regSurname.trim()} registered for ${eventName}.`,
+        `Attendee: #1`,
+        `Email: ${regEmail.trim()}`,
+        `Booking Ref: ${bookingRef}`,
+        `Tickets in booking: ${regQuantity}`,
+        regAdditionalAttendees.length > 0 ? `Primary contact for group booking (${regAdditionalAttendees.length + 1} attendees total)` : '',
+      ].filter(Boolean).join('\n\n');
 
       const registrationPayloads = [{
         name: regName.trim(),
@@ -299,32 +304,30 @@ export function EventPage() {
         cell: regCell.trim(),
         branch: regBranch.trim(),
         eventId,
-        eventName: activeEvent?.title || 'Event',
-        message: [
-          `Email: ${regEmail.trim()}`,
-          `Booking Ref: ${bookingRef}`,
-          `Tickets: ${regQuantity}`,
-          regAdditionalAttendees.length > 0 ? `Group Booking (${regAdditionalAttendees.length + 1} attendees total)` : '',
-          regMessage.trim() ? `Notes: ${regMessage.trim()}` : '',
-        ].filter(Boolean).join('\n\n'),
+        eventName,
+        message: primaryDescription,
+        description: primaryDescription,
         date: new Date(),
       }];
 
       regAdditionalAttendees.forEach((att, idx) => {
+        const attendeeDescription = [
+          `${att.name.trim()} ${att.surname.trim()} registered for ${eventName}.`,
+          `Attendee: #${idx + 2}`,
+          `Email: ${att.email.trim()}`,
+          `Booking Ref: ${bookingRef}`,
+          `Registered By: ${regName.trim()} ${regSurname.trim()} (${regEmail.trim()})`,
+        ].filter(Boolean).join('\n\n');
+
         registrationPayloads.push({
           name: att.name.trim(),
           surname: att.surname.trim(),
           cell: (att.cell || regCell).trim(),
-          branch: regBranch.trim(),
+          branch: att.branch.trim(),
           eventId,
-          eventName: activeEvent?.title || 'Event',
-          message: [
-            `Email: ${att.email.trim()}`,
-            `Booking Ref: ${bookingRef}`,
-            `Attendee: #${idx + 2}`,
-            `Registered By: ${regName.trim()} ${regSurname.trim()} (${regEmail.trim()})`,
-            regMessage.trim() ? `Notes: ${regMessage.trim()}` : '',
-          ].filter(Boolean).join('\n\n'),
+          eventName,
+          message: attendeeDescription,
+          description: attendeeDescription,
           date: new Date(),
         });
       });
@@ -865,23 +868,28 @@ export function EventPage() {
                         onChange={(e) => handleAdditionalAttendeeChange(idx, 'cell', e.target.value)}
                         className="w-full h-12 px-4 rounded-[12px] border border-slate-300 bg-white text-ff-secondary text-sm focus:outline-none focus:border-ff-secondary shadow-sm"
                       />
-                    </div>
                   </div>
                 </div>
-              ))}
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Special Notes or Message (Optional)
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Additional notes for our team..."
-                  value={regMessage}
-                  onChange={(e) => setRegMessage(e.target.value)}
-                  className="w-full p-4 rounded-[12px] border border-slate-300 bg-white text-ff-secondary text-sm focus:outline-none focus:border-ff-secondary shadow-sm"
-                />
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    Branch *
+                  </label>
+                  <select
+                    required
+                    value={att.branch || ''}
+                    onChange={(e) => handleAdditionalAttendeeChange(idx, 'branch', e.target.value)}
+                    className="w-full h-12 px-4 rounded-[12px] border border-slate-300 bg-white text-ff-secondary text-sm focus:outline-none focus:border-ff-secondary shadow-sm cursor-pointer"
+                  >
+                    <option value="">-- Select Branch --</option>
+                    {branchList.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+            ))}
 
               <div className="pt-2">
                 <button

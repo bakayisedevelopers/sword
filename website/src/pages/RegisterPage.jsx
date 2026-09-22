@@ -56,9 +56,6 @@ export function RegisterPage() {
   const [cell, setCell] = useState('');
   const [branch, setBranch] = useState('');
   const [additionalAttendees, setAdditionalAttendees] = useState([]);
-  const [message, setMessage] = useState(
-    `Hi SSMI, I would like to register for ${eventTitleParam}.`
-  );
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -91,7 +88,7 @@ export function RegisterPage() {
       if (extraNeeded <= 0) return [];
       const updated = [...prev];
       while (updated.length < extraNeeded) {
-        updated.push({ name: '', surname: '', email: '', cell: '' });
+        updated.push({ name: '', surname: '', email: '', cell: '', branch: '' });
       }
       return updated.slice(0, extraNeeded);
     });
@@ -114,8 +111,8 @@ export function RegisterPage() {
 
     for (let i = 0; i < additionalAttendees.length; i++) {
       const att = additionalAttendees[i];
-      if (!att.name.trim() || !att.surname.trim() || !att.email.trim()) {
-        alert(`Please fill in Name, Surname, and Email Address for Attendee #${i + 2}.`);
+      if (!att.name.trim() || !att.surname.trim() || !att.email.trim() || !att.branch) {
+        alert(`Please fill in Name, Surname, Email Address, and Branch for Attendee #${i + 2}.`);
         return;
       }
     }
@@ -130,6 +127,15 @@ export function RegisterPage() {
       const bookingRef = `BK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
       const eventId = matchedEvent?.id || eventIdParam || '';
+      const primaryDescription = [
+        `${name.trim()} ${surname.trim()} registered for ${eventTitleParam}.`,
+        `Attendee: #1`,
+        `Email: ${email.trim()}`,
+        `Booking Ref: ${bookingRef}`,
+        `Tickets in booking: ${quantity}`,
+        additionalAttendees.length > 0 ? `Primary contact for group booking (${additionalAttendees.length + 1} attendees total)` : '',
+      ].filter(Boolean).join('\n\n');
+
       const registrationPayloads = [{
         name: name.trim(),
         surname: surname.trim(),
@@ -137,31 +143,29 @@ export function RegisterPage() {
         branch: branch.trim(),
         eventId,
         eventName: eventTitleParam,
-        message: [
-          `Email: ${email.trim()}`,
-          `Booking Ref: ${bookingRef}`,
-          `Tickets: ${quantity}`,
-          additionalAttendees.length > 0 ? `Group Booking (${additionalAttendees.length + 1} attendees total)` : '',
-          message.trim() ? `Notes: ${message.trim()}` : '',
-        ].filter(Boolean).join('\n\n'),
+        message: primaryDescription,
+        description: primaryDescription,
         date: new Date(),
       }];
 
       additionalAttendees.forEach((att, idx) => {
+        const attendeeDescription = [
+          `${att.name.trim()} ${att.surname.trim()} registered for ${eventTitleParam}.`,
+          `Attendee: #${idx + 2}`,
+          `Email: ${att.email.trim()}`,
+          `Booking Ref: ${bookingRef}`,
+          `Registered By: ${name.trim()} ${surname.trim()} (${email.trim()})`,
+        ].filter(Boolean).join('\n\n');
+
         registrationPayloads.push({
           name: att.name.trim(),
           surname: att.surname.trim(),
           cell: (att.cell || cell).trim(),
-          branch: branch.trim(),
+          branch: att.branch.trim(),
           eventId,
           eventName: eventTitleParam,
-          message: [
-            `Email: ${att.email.trim()}`,
-            `Booking Ref: ${bookingRef}`,
-            `Attendee: #${idx + 2}`,
-            `Registered By: ${name.trim()} ${surname.trim()} (${email.trim()})`,
-            message.trim() ? `Notes: ${message.trim()}` : '',
-          ].filter(Boolean).join('\n\n'),
+          message: attendeeDescription,
+          description: attendeeDescription,
           date: new Date(),
         });
       });
@@ -436,21 +440,26 @@ export function RegisterPage() {
                   />
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Branch *
+                </label>
+                <select
+                  required
+                  value={att.branch || ''}
+                  onChange={(e) => handleAdditionalAttendeeChange(idx, 'branch', e.target.value)}
+                  className="w-full h-12 px-4 rounded-[12px] border border-slate-300 bg-white text-ff-secondary text-sm focus:outline-none focus:border-ff-secondary"
+                >
+                  <option value="">-- Select Branch --</option>
+                  {branchList.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           ))}
-
-          <div className="pt-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-              Message (Optional)
-            </label>
-            <textarea
-              rows={3}
-              placeholder="Write a message here (Optional)"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="w-full p-4 rounded-[12px] border border-slate-300 bg-white text-ff-secondary text-sm focus:outline-none focus:border-ff-secondary"
-            />
-          </div>
 
           <button
             type="submit"
