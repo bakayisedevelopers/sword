@@ -109,6 +109,7 @@ export function BeAPartnerPage() {
         kid: 'No',
         branch: branch.trim(),
         postalCode: postalCode.trim(),
+        date: new Date(),
       };
 
       if (dob) {
@@ -140,6 +141,7 @@ export function BeAPartnerPage() {
             branch: branch.trim(),
             postalCode: postalCode.trim(),
             parent: parentDocRef,
+            date: new Date(),
           };
 
           if (kid.dob) {
@@ -204,11 +206,9 @@ export function BeAPartnerPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => console.log('Dashboard clicked')}
+              onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
               className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-            >
-              My Dashboard
-            </button>
+            >Discipleship</button>
             <button
               type="button"
               onClick={toggleDrawer}

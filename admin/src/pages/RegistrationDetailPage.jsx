@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
 import { firestore } from '../lib/firebase';
 
 const registrationAccessRoles = ['super_admin', 'global_editor', 'branch_editor', 'care_team'];
 
 function registrationName(registration) {
   return `${registration?.name || ''} ${registration?.surname || ''}`.trim() || 'Unnamed registration';
+}
+
+function registrationEmail(registration) {
+  if (registration?.email) return registration.email;
+  const match = (registration?.message || '').match(/Email:\s*([^\s\n\r]+)/i);
+  return match ? match[1] : '';
 }
 
 function toDate(value) {
@@ -62,6 +69,7 @@ function TogglePill({ active, children, onClick, disabled = false }) {
 
 export default function RegistrationDetailPage() {
   const { registrationId } = useParams();
+  const navigate = useNavigate();
   const { user, roles, profile } = useAuth();
   const canAccess = roles.some((role) => registrationAccessRoles.includes(role));
   const canReviewAll = roles.includes('super_admin') || roles.includes('global_editor') || roles.includes('care_team');
@@ -74,6 +82,8 @@ export default function RegistrationDetailPage() {
   const [eventDoc, setEventDoc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState('main');
@@ -207,6 +217,19 @@ export default function RegistrationDetailPage() {
     await updateRegistration(payload, status === 'checked_out' ? 'Registration checked out.' : 'Registration checked in.');
   }
 
+  async function handleDeleteRegistration() {
+    if (!registration?.id) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(firestore, 'registrations', registration.id));
+      navigate('/workspace/registrations', { replace: true });
+    } catch {
+      setError('The registration could not be deleted right now.');
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  }
+
   if (!canAccess) return <Navigate to="/access-denied" replace />;
   if (!registrationId) return <Navigate to="/workspace/registrations" replace />;
   if (!loading && !registration && !error) return <Navigate to="/workspace/registrations" replace />;
@@ -219,7 +242,16 @@ export default function RegistrationDetailPage() {
             <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Event registration</p>
             <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">{loading ? 'Loading registration…' : registrationName(registration)}</h1>
           </div>
-          <Link to="/workspace/registrations" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">Back to registrations</Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="rounded-full border border-red-500/30 px-5 py-3 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+            >
+              Delete registration
+            </button>
+            <Link to="/workspace/registrations" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">Back to registrations</Link>
+          </div>
         </section>
 
         {(error || message) && (
@@ -256,6 +288,7 @@ export default function RegistrationDetailPage() {
 
               <div className="grid gap-4 md:grid-cols-3">
                 <DetailItem label="Name" value={registrationName(registration)} />
+                <DetailItem label="Email" value={registrationEmail(registration)} />
                 <DetailItem label="Cell" value={registration.cell} />
                 <DetailItem label="Branch" value={registration.branch} />
                 <DetailItem label="Submitted" value={formatDateTime(registration.date || registration.createdAt)} />
@@ -325,6 +358,16 @@ export default function RegistrationDetailPage() {
           </>
         ) : null}
       </div>
+
+      <ConfirmDeleteModal
+        open={deleteOpen}
+        title="Delete registration"
+        itemName={`${registrationName(registration)} (${registration?.eventName || 'Event'})`}
+        message="Are you sure you want to delete this event registration document? This action is permanent and cannot be undone."
+        loading={deleting}
+        onConfirm={handleDeleteRegistration}
+        onClose={() => setDeleteOpen(false)}
+      />
     </main>
   );
 }

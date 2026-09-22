@@ -60,13 +60,14 @@ export function BranchGivePage() {
       name: officialFallback?.name || branchParam || 'EMalahleni',
       seniorPastor: 'Apostle Bheki & Pst. Zandi Thwala',
       pastorImage: officialFallback?.defaultPastorImage || '/assets/images/B&Z_no_background_1.png',
-      bankName: 'Standard Bank',
-      accountName: 'Sword and Spirit Ministries',
-      accountNumber: '031 056 941',
-      branchCode: '051001',
-      reference: `${officialFallback?.name || branchParam || 'EMalahleni'} Tithe`,
       email: `${officialFallback?.slug || 'emalahleni'}@swordandspirit.org`,
     };
+
+  const bankingDetails = (activeBranch.bankingDetails || '').trim();
+  const yocoLink = (activeBranch.yoco || '').trim();
+  const paypalLink = (activeBranch.paypal || '').trim();
+  const applePayDetail = (activeBranch.applepay || '').trim();
+  const googlePayDetail = (activeBranch.googlepay || '').trim();
 
   const handleCopy = (text) => {
     if (!text) return;
@@ -116,11 +117,9 @@ export function BranchGivePage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => console.log('Dashboard clicked')}
+              onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
               className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-            >
-              My Dashboard
-            </button>
+            >Discipleship</button>
             <button
               type="button"
               onClick={toggleDrawer}
@@ -195,81 +194,93 @@ export function BranchGivePage() {
 
             <button
               type="button"
-              onClick={() =>
-                handleCopy(
-                  `${activeBranch.name} Branch\nBank: ${activeBranch.bankName || 'Standard Bank'}\nAccount: ${activeBranch.accountNumber || '031 056 941'}\nCode: ${activeBranch.branchCode || '051001'}\nRef: ${activeBranch.name} Tithe`
-                )
-              }
+              disabled={!bankingDetails}
+              onClick={() => handleCopy(`${activeBranch.name} Branch\n${bankingDetails}`)}
               className="px-6 py-2.5 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-xs hover:bg-white/90 transition-colors shadow-sm self-start sm:self-auto"
             >
               {copied ? 'Copied!' : 'Copy Bank Details'}
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-6 rounded-[20px] border border-white/10 text-sm">
-            <div>
-              <span className="text-xs text-white/60 block">Bank</span>
-              <span className="font-bold text-base text-white">
-                {activeBranch.bankName || 'Standard Bank'}
-              </span>
+          {bankingDetails ? (
+            <div className="bg-white/5 p-6 rounded-[20px] border border-white/10 text-sm">
+              <span className="text-xs text-white/60 block mb-2">Saved Branch Banking Details</span>
+              <div className="whitespace-pre-line text-base font-semibold leading-8 text-white">
+                {bankingDetails}
+              </div>
             </div>
-            <div>
-              <span className="text-xs text-white/60 block">Account Name</span>
-              <span className="font-bold text-base text-white">
-                {activeBranch.accountName || 'Sword and Spirit Ministries'}
-              </span>
+          ) : (
+            <div className="bg-white/5 p-6 rounded-[20px] border border-white/10 text-sm text-white/75">
+              Banking details have not been added for this branch yet.
             </div>
-            <div>
-              <span className="text-xs text-white/60 block">Account Number</span>
-              <span className="font-bold text-base text-white">
-                {activeBranch.accountNumber || '031 056 941'}
-              </span>
-            </div>
-            <div>
-              <span className="text-xs text-white/60 block">Branch Code</span>
-              <span className="font-bold text-base text-white">
-                {activeBranch.branchCode || '051001'}
-              </span>
-            </div>
-          </div>
-
-          <p className="text-xs text-white/70">
-            Payment Reference: <strong className="text-white">{activeBranch.name} Tithe / Your Name</strong>
-          </p>
+          )}
         </div>
       </section>
 
-      {/* 4. OTHER WAYS TO GIVE (YOCO) */}
-      <section className="w-[90%] max-w-[1200px] mx-auto my-8">
-        <h3 className="text-xl font-bold text-ff-secondary mb-4">
-          Other Ways to Give
-        </h3>
-        <div className="bg-slate-50 border border-slate-200 rounded-[24px] p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-24 h-12 bg-white rounded-[12px] p-2 border border-slate-200 flex items-center justify-center">
-              <img
-                src="/assets/images/yoco-logo-og-3-removebg-preview.png"
-                alt="Yoco Payment"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div>
-              <h4 className="font-bold text-ff-secondary text-base">Pay with Card via Yoco</h4>
-              <p className="text-xs text-slate-500">Fast, safe and secure instant online payment</p>
-            </div>
-          </div>
+      {(yocoLink || paypalLink || applePayDetail || googlePayDetail) && (
+        <section className="w-[90%] max-w-[1200px] mx-auto my-8">
+          <h3 className="text-xl font-bold text-ff-secondary mb-4">
+            Other Ways to Give
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {yocoLink && (
+              <div className="bg-slate-50 border border-slate-200 rounded-[24px] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="w-24 h-12 bg-white rounded-[12px] p-2 border border-slate-200 flex items-center justify-center">
+                    <img
+                      src="/assets/images/yoco-logo-og-3-removebg-preview.png"
+                      alt="Yoco Payment"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-ff-secondary text-base">Pay with Card via Yoco</h4>
+                    <p className="text-xs text-slate-500">Fast, safe and secure instant online payment</p>
+                  </div>
+                </div>
 
-          <a
-            href="https://pay.yoco.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-8 py-3 rounded-[50px] bg-ff-secondary text-white font-bold text-xs hover:bg-slate-800 transition-colors shadow-md inline-flex items-center gap-1.5"
-          >
-            <span>Pay with Yoco</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </a>
-        </div>
-      </section>
+                <a
+                  href={yocoLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-3 rounded-[50px] bg-ff-secondary text-white font-bold text-xs hover:bg-slate-800 transition-colors shadow-md inline-flex items-center gap-1.5"
+                >
+                  <span>Pay with Yoco</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            )}
+            {paypalLink && (
+              <div className="bg-slate-50 border border-slate-200 rounded-[24px] p-6 flex items-center justify-between gap-4 shadow-sm">
+                <div>
+                  <h4 className="font-bold text-ff-secondary text-base">PayPal</h4>
+                  <p className="text-xs text-slate-500">Give using the saved branch PayPal link.</p>
+                </div>
+                <a
+                  href={paypalLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-3 rounded-[50px] bg-ff-secondary text-white font-bold text-xs hover:bg-slate-800 transition-colors shadow-md"
+                >
+                  Open
+                </a>
+              </div>
+            )}
+            {applePayDetail && (
+              <div className="bg-slate-50 border border-slate-200 rounded-[24px] p-6 shadow-sm">
+                <h4 className="font-bold text-ff-secondary text-base">Apple Pay</h4>
+                <p className="mt-2 whitespace-pre-line text-sm text-slate-600">{applePayDetail}</p>
+              </div>
+            )}
+            {googlePayDetail && (
+              <div className="bg-slate-50 border border-slate-200 rounded-[24px] p-6 shadow-sm">
+                <h4 className="font-bold text-ff-secondary text-base">Google Pay</h4>
+                <p className="mt-2 whitespace-pre-line text-sm text-slate-600">{googlePayDetail}</p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* 5. SITE FOOTER */}
       <SiteFooter />

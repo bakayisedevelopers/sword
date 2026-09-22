@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
 import { firestore } from '../lib/firebase';
 
@@ -8,9 +8,340 @@ const ministryAccessRoles = ['super_admin', 'global_editor', 'branch_editor', 'm
 const creatorRoles = ['super_admin', 'global_editor', 'branch_editor'];
 const fewdsOptions = ['Fellowship', 'Evangelism', 'Worship', 'Discipleship', 'Service'];
 
+const typeOptions = [
+  { id: 'normal', label: 'Normal Ministry (Catering, Worship, etc.)' },
+  { id: 'special', label: 'Special Ministry (Youth, Singles, Couples, Kids)' },
+  { id: 'conference', label: 'Conference / Special Gathering (Fire Conf, Camp Yolo, etc.)' },
+];
+
+export const defaultSeedMinistries = [
+  {
+    name: 'Fire Conference',
+    ministryName: 'Fire Conference',
+    slug: 'fire-conference',
+    type: 'conference',
+    FEWDS: 'Evangelism',
+    description: 'An explosive annual gathering focused on spiritual revival, prophetic impartation, and Kingdom power.',
+    picture: '/assets/images/FireConf_(2).png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Boksburg', 'Lagos'],
+    meetingDetails: 'Annual conference held at designated SSMI regional centers. Specific schedules and keynote sessions are published prior to the gathering.',
+    servingDetails: 'Join our host team, prayer intercessors, security, media, sound engineering, or hospitality crew.',
+    contactName: 'Fire Conference Committee',
+    contactEmail: 'fireconf@swordandspirit.org',
+    contactWhatsApp: '+26876000000',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'Superman Conference',
+    ministryName: 'Superman Conference',
+    slug: 'superman-conference',
+    type: 'conference',
+    FEWDS: 'Discipleship',
+    description: 'Empowering men to rise into spiritual leadership, strength, integrity, and godly authority in home, church, and society.',
+    picture: '/assets/images/SuperKids.png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Boksburg', 'Online'],
+    meetingDetails: 'Held annually across major SSMI campuses, featuring workshops, keynote sessions, and brotherhood fellowship.',
+    servingDetails: 'Serve in logistics, ushering, sound engineering, media, or hospitality for the Men’s Conference.',
+    contactName: 'Men’s Ministry Leadership',
+    contactEmail: 'superman@swordandspirit.org',
+    contactWhatsApp: '+26876000001',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'Camp YOLO',
+    ministryName: 'Camp YOLO',
+    slug: 'camp-yolo',
+    type: 'conference',
+    FEWDS: 'Fellowship',
+    description: 'Youth Living Out Loud! An immersive retreat packed with worship, Bible teaching, outdoor activities, and youth connection.',
+    picture: '/assets/images/CampYolo.png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Hlutsi', 'Ludzeludze', 'Boksburg'],
+    meetingDetails: 'Annual youth camp held during school holidays at selected retreat centers.',
+    servingDetails: 'Counselors, team leaders, games coordinators, logistics assistants, and medical personnel needed.',
+    contactName: 'Youth Pastor & Camp Directors',
+    contactEmail: 'yolo@swordandspirit.org',
+    contactWhatsApp: '+26876000002',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'Youth Ministry',
+    ministryName: 'Youth Ministry',
+    slug: 'youth',
+    type: 'special',
+    FEWDS: 'Fellowship',
+    description: 'Equipping teenagers and young believers to stand uncompromised in their faith, cultivate spiritual gifts, and impact their schools.',
+    picture: '/assets/images/Youth.png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Hlutsi', 'Ludzeludze', 'Boksburg', 'Orange Farm'],
+    meetingDetails: 'Meets every Friday at 17:00 across SSMI branches for passionate worship, the Word, and fellowship.',
+    servingDetails: 'Youth worship team, media, small group leaders, ushering, and event setup team.',
+    contactName: 'Youth Coordinator',
+    contactEmail: 'youth@swordandspirit.org',
+    contactWhatsApp: '+26876000003',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'For Men',
+    ministryName: 'Men of Dominion',
+    slug: 'for-men',
+    type: 'special',
+    FEWDS: 'Discipleship',
+    description: 'Fostering authentic brotherhood, spiritual maturity, leadership development, and prayer among men of all ages.',
+    picture: '/assets/images/Ladies.png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Hlutsi', 'Ludzeludze', 'Boksburg', 'Lagos'],
+    meetingDetails: 'Monthly Saturday morning breakfast meetings and bi-weekly prayer calls across campuses.',
+    servingDetails: 'Mentorship, event logistics, ushering, men’s choir, and community outreach.',
+    contactName: 'Men’s Ministry Leader',
+    contactEmail: 'men@swordandspirit.org',
+    contactWhatsApp: '+26876000004',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'For Women',
+    ministryName: 'Women of Virtue & Power',
+    slug: 'for-women',
+    type: 'special',
+    FEWDS: 'Discipleship',
+    description: 'Uniting women in prayer, Bible study, holistic empowerment, mentorship, and impactful community service.',
+    picture: '/assets/images/Ladies.png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Hlutsi', 'Ludzeludze', 'Boksburg', 'Orange Farm', 'Lagos'],
+    meetingDetails: 'Monthly women’s gatherings and bi-weekly prayer circles across campuses.',
+    servingDetails: 'Prayer team, hospitality, event coordination, welfare support, and mentorship.',
+    contactName: 'Women’s Ministry Leader',
+    contactEmail: 'women@swordandspirit.org',
+    contactWhatsApp: '+26876000005',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'For Couples',
+    ministryName: 'Couples Ministry',
+    slug: 'for-couples',
+    type: 'special',
+    FEWDS: 'Fellowship',
+    description: 'Strengthening marital bonds, fostering Biblical relationship principles, and building healthy, lasting Christian families.',
+    picture: '/assets/images/Couples_(2).png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Boksburg'],
+    meetingDetails: 'Quarterly couples dinners, marriage enrichment seminars, and annual relationship retreats.',
+    servingDetails: 'Event planning, couples counseling support, seminar hospitality, and host team.',
+    contactName: 'Marriage Directors',
+    contactEmail: 'couples@swordandspirit.org',
+    contactWhatsApp: '+26876000006',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'Singles Ministry',
+    ministryName: 'Singles Ministry',
+    slug: 'singles',
+    type: 'special',
+    FEWDS: 'Fellowship',
+    description: 'Empowering unmarried adults to live purposefully, grow in Christ, and navigate career, relationships, and calling.',
+    picture: '/assets/images/Felloship_(2).png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Boksburg', 'Online'],
+    meetingDetails: 'Monthly social gatherings, interactive workshops, and career & relationship seminars.',
+    servingDetails: 'Event hosts, discussion facilitators, sound & media, and community outreach.',
+    contactName: 'Singles Coordinator',
+    contactEmail: 'singles@swordandspirit.org',
+    contactWhatsApp: '+26876000007',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'Young Adults',
+    ministryName: 'Young Adults Ministry',
+    slug: 'young-adults',
+    type: 'special',
+    FEWDS: 'Fellowship',
+    description: 'Connecting university students and young professionals (ages 18–35) in passionate worship, discipleship, and kingdom impact.',
+    picture: '/assets/images/Youth.png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Boksburg', 'Online'],
+    meetingDetails: 'Bi-weekly Friday evening fellowship and monthly campus worship nights.',
+    servingDetails: 'Worship team, small group leaders, media, ushering, and campus outreach.',
+    contactName: 'Young Adults Leader',
+    contactEmail: 'youngadults@swordandspirit.org',
+    contactWhatsApp: '+26876000008',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'Super Kids',
+    ministryName: 'Children’s Church (Super Kids)',
+    slug: 'super-kids',
+    type: 'special',
+    FEWDS: 'Discipleship',
+    description: 'Nurturing children (ages 2–12) in God’s Word through fun, creative lessons, worship, crafts, and interactive prayer.',
+    picture: '/assets/images/SuperKids.png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Hlutsi', 'Ludzeludze', 'Boksburg', 'Orange Farm', 'Lagos'],
+    meetingDetails: 'Runs parallel to Sunday adult services at 09:00 AM across all SSMI branches.',
+    servingDetails: 'Sunday school teachers, classroom helpers, child check-in registration crew, and praise team.',
+    contactName: 'SuperKids Coordinator',
+    contactEmail: 'kids@swordandspirit.org',
+    contactWhatsApp: '+26876000009',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'Welfare Ministry',
+    ministryName: 'Welfare & Benevolence',
+    slug: 'welfare',
+    type: 'normal',
+    FEWDS: 'Service',
+    description: 'Demonstrating Christ’s love by providing food, clothing, emergency financial assistance, and compassionate care to families in need.',
+    picture: '/assets/images/Care_(2).png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Hlutsi', 'Ludzeludze', 'Boksburg', 'Orange Farm'],
+    meetingDetails: 'Weekly food hamper distribution and emergency care support coordination across local branches.',
+    servingDetails: 'Food drive collection, hamper packing, home visitation team, and community distribution.',
+    contactName: 'Welfare Department Head',
+    contactEmail: 'welfare@swordandspirit.org',
+    contactWhatsApp: '+26876000010',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'Counseling Ministry',
+    ministryName: 'Pastoral Counseling',
+    slug: 'counseling',
+    type: 'normal',
+    FEWDS: 'Service',
+    description: 'Providing confidential, Scripture-based guidance, emotional support, and spiritual healing for individuals, couples, and families.',
+    picture: '/assets/images/Counselling_(2).png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Boksburg', 'Online'],
+    meetingDetails: 'Available by appointment during weekday office hours and post-service on Sundays.',
+    servingDetails: 'Trained lay counselors, prayer partners, and appointment receptionists.',
+    contactName: 'Head Counselor',
+    contactEmail: 'counseling@swordandspirit.org',
+    contactWhatsApp: '+26876000011',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'Fellowship Ministry',
+    ministryName: 'Fellowship & Cell Groups',
+    slug: 'fellowship',
+    type: 'normal',
+    FEWDS: 'Fellowship',
+    description: 'Connecting believers in small group home cell fellowships for Bible study, mutual encouragement, prayer, and community life.',
+    picture: '/assets/images/Felloship_(2).png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Hlutsi', 'Ludzeludze', 'Boksburg', 'Orange Farm', 'Lagos'],
+    meetingDetails: 'Weekly home cell meetings every Wednesday evening from 18:00 to 19:30 in neighborhoods.',
+    servingDetails: 'Home cell hosts, discussion facilitators, neighborhood coordinators, and hospitality teams.',
+    contactName: 'Cell Group Overseer',
+    contactEmail: 'fellowship@swordandspirit.org',
+    contactWhatsApp: '+26876000012',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'School of Ministry',
+    ministryName: 'SSMI School of Ministry',
+    slug: 'school-of-ministry',
+    type: 'normal',
+    FEWDS: 'Discipleship',
+    description: 'Comprehensive theological training, leadership certification, and practical ministry preparation for aspiring leaders and ministers.',
+    picture: '/assets/images/Minstries_(2).png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Boksburg', 'Online'],
+    meetingDetails: 'Saturday intensive modules and weekday evening online lectures via the student portal.',
+    servingDetails: 'Academic admin, registrar support, library management, and online lecture facilitators.',
+    contactName: 'Dean of Academics',
+    contactEmail: 'som@swordandspirit.org',
+    contactWhatsApp: '+26876000013',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'Baptism Ministry',
+    ministryName: 'Water Baptism',
+    slug: 'baptism',
+    type: 'normal',
+    FEWDS: 'Discipleship',
+    description: 'Guiding new believers through water baptism classes and celebrating their public confession of faith in Jesus Christ.',
+    picture: '/assets/images/Baptis_(2).png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Hlutsi', 'Ludzeludze', 'Boksburg', 'Orange Farm'],
+    meetingDetails: 'Monthly baptism classes followed by baptism celebration services at designated campus baptistries.',
+    servingDetails: 'Baptism preparation crew, towel/gown hospitality team, and registration assistants.',
+    contactName: 'Baptism Coordinator',
+    contactEmail: 'baptism@swordandspirit.org',
+    contactWhatsApp: '+26876000014',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+  {
+    name: 'Prayer Ministry',
+    ministryName: 'Intercessory Prayer',
+    slug: 'prayer',
+    type: 'normal',
+    FEWDS: 'Worship',
+    description: 'Standing in the gap for the church, leaders, nations, and individual prayer requests through continuous intercessory prayer.',
+    picture: '/assets/images/Care_(2).png',
+    branches: ['EMalahleni', 'Mbabane', 'Siteki', 'Hlutsi', 'Ludzeludze', 'Boksburg', 'Orange Farm', 'Lagos', 'Online'],
+    meetingDetails: 'Pre-service Sunday intercessory prayer at 08:30 AM and Thursday evening churchwide prayer from 18:30 to 19:30.',
+    servingDetails: 'Intercessors, altar prayer ministers, and online prayer chain team.',
+    contactName: 'Prayer Director',
+    contactEmail: 'prayer@swordandspirit.org',
+    contactWhatsApp: '+26876000015',
+    donations: false,
+    volunteers: true,
+    forServing: true,
+    bankingDetails: '',
+    status: 'active',
+  },
+];
+
 const emptyDraft = {
   name: '',
   ministryName: '',
+  slug: '',
+  type: 'normal',
   description: '',
   picture: '',
   FEWDS: 'Fellowship',
@@ -50,6 +381,9 @@ function ministryBranches(ministry) {
 }
 
 function ministryMatchesBranch(ministry, branchDoc) {
+  if (ministry?.global === true || ministryBranches(ministry).some((b) => `${b}`.trim().toLowerCase() === 'global')) {
+    return true;
+  }
   const selectedName = branchLabel(branchDoc).toLowerCase();
   const selectedId = `${branchDoc?.id || ''}`.toLowerCase();
   return ministryBranches(ministry).some((branch) => {
@@ -89,13 +423,21 @@ function ChevronIcon() {
 }
 
 function MinistryRow({ ministry, canEdit }) {
+  const isGlobal = ministry?.global === true || ministryBranches(ministry).some((b) => `${b}`.trim().toLowerCase() === 'global');
   return (
     <Link
       to={`/workspace/ministries/${ministry.id}`}
       className="group flex w-full items-center justify-between rounded-[1.35rem] border border-white/10 bg-slate-950/40 px-4 py-4 text-left transition hover:border-brand-gold/40 hover:bg-brand-gold/5"
     >
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-white">{ministryName(ministry)}</p>
+        <div className="flex items-center gap-2">
+          <p className="truncate font-semibold text-white">{ministryName(ministry)}</p>
+          {isGlobal && (
+            <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-gold">
+              Global
+            </span>
+          )}
+        </div>
         <div className="mt-1 hidden flex-wrap gap-2 text-xs text-slate-400 sm:flex">
           <span>{ministry.FEWDS || 'No department'}</span>
           {ministry.donations ? <span className="text-brand-gold">Giving enabled</span> : null}
@@ -152,9 +494,14 @@ function TogglePill({ active, children, onClick, disabled = false }) {
 }
 
 function buildCreatePayload(draft, user) {
+  const normalizedSlug = draft.slug.trim().toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const isGlobal = draft.branches.some((b) => `${b}`.trim().toLowerCase() === 'global');
   return {
     name: draft.name.trim(),
     ministryName: draft.ministryName.trim() || draft.name.trim(),
+    slug: normalizedSlug,
+    type: draft.type || 'normal',
+    global: isGlobal,
     description: draft.description.trim(),
     picture: draft.picture.trim(),
     FEWDS: draft.FEWDS,
@@ -272,6 +619,52 @@ export default function MinistriesWorkspacePage() {
     ? ministries.filter((ministry) => ministryMatchesBranch(ministry, selectedBranch))
     : [];
 
+  async function handleBackfill() {
+    if (!canManageAll) return;
+    setCreating(true);
+    setError('');
+    setMessage('Backfilling 16 target ministries...');
+
+    try {
+      const snapshot = await getDocs(collection(firestore, 'ministries'));
+      const existingDocs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      let updatedCount = 0;
+      let createdCount = 0;
+
+      for (const seed of defaultSeedMinistries) {
+        const existing = existingDocs.find(
+          (m) =>
+            (m.slug && m.slug === seed.slug) ||
+            (m.name && m.name.toLowerCase() === seed.name.toLowerCase()) ||
+            (m.ministryName && m.ministryName.toLowerCase() === seed.name.toLowerCase())
+        );
+
+        if (existing) {
+          await setDoc(doc(firestore, 'ministries', existing.id), { ...seed, updatedAt: serverTimestamp() }, { merge: true });
+          updatedCount++;
+        } else {
+          const payload = { ...seed, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), createdBy: user?.uid || '' };
+          await addDoc(collection(firestore, 'ministries'), payload);
+          createdCount++;
+        }
+      }
+
+      const refreshedSnap = await getDocs(collection(firestore, 'ministries'));
+      const refreshedList = refreshedSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .sort((left, right) => ministryName(left).localeCompare(ministryName(right)));
+
+      setMinistries(refreshedList);
+      setMessage(`Backfilled successfully! Created ${createdCount}, updated ${updatedCount} ministries.`);
+    } catch (err) {
+      console.error(err);
+      setError('Could not backfill ministries: ' + (err.message || 'Error'));
+    } finally {
+      setCreating(false);
+    }
+  }
+
   useEffect(() => {
     if (!selectedBranch || activeTab !== 'create') {
       return;
@@ -310,6 +703,12 @@ export default function MinistriesWorkspacePage() {
 
     if (!draft.name.trim()) {
       setError('Enter a ministry name first.');
+      setMessage('');
+      return;
+    }
+
+    if (!draft.slug.trim()) {
+      setError('Enter a URL slug (e.g. fire-conference, for-couples) first.');
       setMessage('');
       return;
     }
@@ -410,7 +809,7 @@ export default function MinistriesWorkspacePage() {
           </div>
         </section>
 
-        <section className="flex justify-center">
+        <section className="flex flex-wrap items-center justify-center gap-3">
           <div className="inline-flex rounded-full border border-white/10 bg-slate-950/60 p-1">
             <button
               type="button"
@@ -427,6 +826,17 @@ export default function MinistriesWorkspacePage() {
               Create ministry
             </button>
           </div>
+
+          {canManageAll && (
+            <button
+              type="button"
+              onClick={handleBackfill}
+              disabled={creating}
+              className="rounded-full border border-brand-gold/60 bg-brand-gold/10 px-5 py-2 text-sm font-semibold text-brand-gold transition hover:bg-brand-gold hover:text-slate-950 disabled:opacity-50"
+            >
+              {creating ? 'Backfilling...' : 'Backfill 16 Target Ministries'}
+            </button>
+          )}
         </section>
 
         {activeTab === 'ministries' ? (
@@ -469,6 +879,17 @@ export default function MinistriesWorkspacePage() {
             <div className="grid gap-4 md:grid-cols-2">
               <TextField label="Name" value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Ministry name" />
               <TextField label="Ministry name alias" value={draft.ministryName} onChange={(event) => setDraft((current) => ({ ...current, ministryName: event.target.value }))} placeholder="Optional alias" />
+              <TextField label="URL Slug (Required, e.g. for-couples, fire-conference)" value={draft.slug} onChange={(event) => setDraft((current) => ({ ...current, slug: event.target.value }))} placeholder="e.g. for-couples" />
+              <label className="block space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Ministry Category Type</span>
+                <select
+                  value={draft.type}
+                  onChange={(event) => setDraft((current) => ({ ...current, type: event.target.value }))}
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-brand-gold/60 focus:bg-brand-gold/5"
+                >
+                  {typeOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+                </select>
+              </label>
               <TextField label="Picture URL" value={draft.picture} onChange={(event) => setDraft((current) => ({ ...current, picture: event.target.value }))} placeholder="Image URL" />
               <label className="block space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">FEWDS department</span>
@@ -487,6 +908,13 @@ export default function MinistriesWorkspacePage() {
             <section className="rounded-[1.6rem] border border-white/10 bg-slate-950/60 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Branches</p>
               <div className="mt-3 flex flex-wrap gap-2">
+                <TogglePill
+                  active={draft.branches.includes('Global')}
+                  disabled={!canManageAll}
+                  onClick={() => toggleDraftBranch('Global')}
+                >
+                  🌐 Global (All Branches)
+                </TogglePill>
                 {branches.map((branchDoc) => {
                   const label = branchLabel(branchDoc);
                   const disabled = !canManageAll && label !== selectedBranchName;

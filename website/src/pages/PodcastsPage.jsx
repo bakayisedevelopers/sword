@@ -16,7 +16,7 @@ import { ChevronRight } from '../components/common/Icons.jsx';
  */
 export function PodcastsPage() {
   const { toggleDrawer } = useAppState();
-  const [selectedBranch, setSelectedBranch] = useState('All');
+  const [selectedBranch, setSelectedBranch] = useState('EMalahleni');
 
   useEffect(() => {
     document.title = 'Podcast | Sword of the Spirit Ministries';
@@ -40,8 +40,8 @@ export function PodcastsPage() {
 
   const branchOptions = [
     'All',
-    'Online',
     'EMalahleni',
+    'Online',
     'Boksburg',
     'Siteki',
     'Hlutsi',
@@ -53,8 +53,12 @@ export function PodcastsPage() {
 
   const filteredPodcasts = podcasts.filter((p) => {
     if (selectedBranch === 'All') return true;
-    const branchName = p.branchName || p.branch_name || '';
-    return branchName.toLowerCase() === selectedBranch.toLowerCase();
+    const branchName = (p.branchName || p.branch_name || '').trim().toLowerCase();
+    if (selectedBranch.toLowerCase() === 'online') {
+      // Online branch shows EMalahleni and Online podcasts
+      return branchName === 'online' || branchName === 'emalahleni' || branchName === 'e-malahleni';
+    }
+    return branchName === selectedBranch.toLowerCase();
   });
 
   const navItems = [
@@ -139,11 +143,9 @@ export function PodcastsPage() {
 
             <button
               type="button"
-              onClick={() => console.log('My Dashboard clicked')}
+              onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
               className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-            >
-              My Dashboard
-            </button>
+            >Discipleship</button>
           </div>
         </div>
       </div>
@@ -174,11 +176,9 @@ export function PodcastsPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => console.log('Dashboard clicked')}
+                onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
                 className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-sm font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-              >
-                Dashboard
-              </button>
+              >Discipleship</button>
               <button
                 type="button"
                 onClick={toggleDrawer}
@@ -226,26 +226,33 @@ export function PodcastsPage() {
         </div>
       </section>
 
-      {/* 3. BRANCH CHOICE CHIPS & PODCAST EPISODES */}
+      {/* 3. BRANCH DROPDOWN FILTER & PODCAST EPISODES */}
       <section className="w-[90%] max-w-[1100px] mx-auto my-6">
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
-          {branchOptions.map((branch) => {
-            const isSelected = selectedBranch.toLowerCase() === branch.toLowerCase();
-            return (
-              <button
-                key={branch}
-                type="button"
-                onClick={() => setSelectedBranch(branch)}
-                className={`px-4 py-2 rounded-[15px] text-sm font-semibold transition-colors border ${
-                  isSelected
-                    ? 'bg-ff-secondary text-white border-ff-secondary'
-                    : 'bg-white text-ff-secondary border-ff-secondary hover:bg-slate-50'
-                }`}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-[20px] border border-ff-secondary/30 shadow-sm">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-ff-secondary">Recent Podcast Episodes</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Filtered for: <strong className="text-ff-secondary font-bold">{selectedBranch === 'All' ? 'All Campuses' : selectedBranch}</strong>
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 hidden md:inline">
+              Campus:
+            </span>
+            <div className="relative min-w-[200px]">
+              <select
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+                className="w-full h-11 px-4 pr-9 rounded-xl border border-ff-secondary/40 bg-white text-sm font-semibold text-ff-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer shadow-sm"
               >
-                {branch}
-              </button>
-            );
-          })}
+                {branchOptions.map((b) => (
+                  <option key={b} value={b}>
+                    {b === 'All' ? '🌐 All Branches' : b}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         <div className="w-full rounded-[20px] border border-ff-secondary p-4 sm:p-6 bg-slate-50/50">
@@ -262,6 +269,13 @@ export function PodcastsPage() {
                   ? 'No episodes have been published yet.'
                   : `No episodes found for the ${selectedBranch} branch.`}
               </p>
+              <button
+                type="button"
+                onClick={() => setSelectedBranch('All')}
+                className="mt-3 px-5 py-2 rounded-full bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition shadow-sm"
+              >
+                Show All Branches
+              </button>
             </div>
           ) : (
             <div className="space-y-4 max-h-[550px] overflow-y-auto pr-1 sm:pr-2">

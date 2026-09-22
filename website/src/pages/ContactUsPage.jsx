@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppState } from '../app/providers.jsx';
 import { COLLECTIONS, createRecord } from '../lib/firestore.js';
-import { SignUpModal } from '../components/modals/SignUpModal.jsx';
+import { useFirestoreQuery } from '../hooks/useFirestoreQuery.js';
 import { SiteFooter } from '../components/layout/SiteFooter.jsx';
 import { MobileDrawer } from '../components/layout/MobileDrawer.jsx';
-import { ChevronRight } from '../components/common/Icons.jsx';
+import { QuickActionButtons } from '../components/common/QuickActionButtons.jsx';
 
 /**
  * ContactUsPage reproducing ContactUsWidget:
@@ -22,89 +22,35 @@ export function ContactUsPage() {
   const [formBranch, setFormBranch] = useState('Online');
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [signUpOpen, setSignUpOpen] = useState(false);
+  const { data: rawBranches = [] } = useFirestoreQuery(COLLECTIONS.BRANCHES);
 
   useEffect(() => {
     document.title = 'Contact Us | Sword of the Spirit Ministries';
     window.scrollTo(0, 0);
   }, []);
 
-  const branches = [
-    'Online',
-    'Mbabane',
-    'Siteki',
-    'Hlutsi',
-    'Ludzeludze',
-    'EMalahleni',
-    'Boksburg',
-    'Orange Farm',
-    'Lagos',
-  ];
+  const branches = [...rawBranches]
+    .filter((branch) => branch.name)
+    .sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase()));
 
-  const branchContacts = {
-    Online: {
-      email: 'online@swordandspirit.org',
-      phone: '+27 13 656 1234',
-      facebook: 'https://facebook.com/SSMIOnline',
-      instagram: 'https://instagram.com/swordandspiritministries',
-    },
-    Mbabane: {
-      email: 'mbabane@swordandspirit.org',
-      phone: '+268 7600 0000',
-      facebook: 'https://facebook.com/SSMIMbabane',
-      instagram: 'https://instagram.com/ssmi_mbabane',
-    },
-    Siteki: {
-      email: 'siteki@swordandspirit.org',
-      phone: '+268 7611 1111',
-      facebook: 'https://facebook.com/SSMISiteki',
-      instagram: 'https://instagram.com/ssmi_siteki',
-    },
-    Hlutsi: {
-      email: 'hlutsi@swordandspirit.org',
-      phone: '+268 7622 2222',
-      facebook: 'https://facebook.com/SSMIHlutsi',
-      instagram: 'https://instagram.com/ssmi_hlutsi',
-    },
-    Ludzeludze: {
-      email: 'ludzeludze@swordandspirit.org',
-      phone: '+268 7633 3333',
-      facebook: 'https://facebook.com/SSMILudzeludze',
-      instagram: 'https://instagram.com/ssmi_ludzeludze',
-    },
-    EMalahleni: {
-      email: 'emalahleni@swordandspirit.org',
-      phone: '+27 13 656 0000',
-      facebook: 'https://facebook.com/SSMIEMalahleni',
-      instagram: 'https://instagram.com/ssmi_emalahleni',
-    },
-    Boksburg: {
-      email: 'boksburg@swordandspirit.org',
-      phone: '+27 11 894 0000',
-      facebook: 'https://facebook.com/SSMIBoksburg',
-      instagram: 'https://instagram.com/ssmi_boksburg',
-    },
-    OrangeFarm: {
-      email: 'orangefarm@swordandspirit.org',
-      phone: '+27 11 850 0000',
-      facebook: 'https://facebook.com/SSMIOrangeFarm',
-      instagram: 'https://instagram.com/ssmi_orangefarm',
-    },
-    'Orange Farm': {
-      email: 'orangefarm@swordandspirit.org',
-      phone: '+27 11 850 0000',
-      facebook: 'https://facebook.com/SSMIOrangeFarm',
-      instagram: 'https://instagram.com/ssmi_orangefarm',
-    },
-    Lagos: {
-      email: 'lagos@swordandspirit.org',
-      phone: '+234 800 000 0000',
-      facebook: 'https://facebook.com/SSMILagos',
-      instagram: 'https://instagram.com/ssmi_lagos',
-    },
+  useEffect(() => {
+    if (branches.length === 0) return;
+    if (!branches.some((branch) => branch.name === selectedBranch)) {
+      setSelectedBranch(branches[0].name);
+      setFormBranch(branches[0].name);
+    }
+  }, [branches, selectedBranch]);
+
+  const activeBranch = branches.find((branch) => branch.name === selectedBranch) || branches[0] || null;
+  const activeContact = {
+    email: (activeBranch?.email || '').trim(),
+    phone: (activeBranch?.phone_number || activeBranch?.phoneNumber || activeBranch?.phone || '').trim(),
+    whatsapp: (activeBranch?.whatsapp || '').trim(),
+    facebook: (activeBranch?.facebook || '').trim(),
+    instagram: (activeBranch?.instagram || '').trim(),
+    youtube: (activeBranch?.youtube || '').trim(),
+    website: (activeBranch?.website || '').trim(),
   };
-
-  const activeContact = branchContacts[selectedBranch] || branchContacts.Online;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -138,15 +84,6 @@ export function ContactUsPage() {
     { name: 'Care', path: '/care' },
     { name: 'Events', path: '/events' },
     { name: 'Give', path: '/give' },
-  ];
-
-  const actionCards = [
-    { title: 'I am New to Sword.', path: '/follow-jesus' },
-    { title: 'Give my life to Jesus.', path: '/follow-jesus' },
-    { title: 'I want to get baptized.', path: '/baptism' },
-    { title: 'I want to fellowship.', path: '/fellowship' },
-    { title: 'I want to be a partner.', path: '/be-a-partner' },
-    { title: 'I want to serve.', action: () => setSignUpOpen(true) },
   ];
 
   return (
@@ -189,11 +126,9 @@ export function ContactUsPage() {
 
             <button
               type="button"
-              onClick={() => console.log('My Dashboard clicked')}
+              onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
               className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-            >
-              My Dashboard
-            </button>
+            >Discipleship</button>
           </div>
         </div>
       </div>
@@ -224,11 +159,9 @@ export function ContactUsPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => console.log('Dashboard clicked')}
+                onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
                 className="h-9 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-sm font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-              >
-                Dashboard
-              </button>
+              >Discipleship</button>
               <button
                 type="button"
                 onClick={toggleDrawer}
@@ -258,7 +191,7 @@ export function ContactUsPage() {
             Contact {selectedBranch}
           </h2>
           <p className="text-sm sm:text-base text-slate-600 mt-2">
-            Choose Branch to see the Social Links for the Branch.
+            Choose a branch to see the contact and social links saved for that branch.
           </p>
         </div>
 
@@ -266,16 +199,19 @@ export function ContactUsPage() {
         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-8">
           {branches.map((b) => (
             <button
-              key={b}
+              key={b.id || b.name}
               type="button"
-              onClick={() => setSelectedBranch(b)}
+              onClick={() => {
+                setSelectedBranch(b.name);
+                setFormBranch(b.name);
+              }}
               className={`px-5 py-2.5 rounded-[50px] text-xs sm:text-sm font-bold transition-colors ${
-                selectedBranch === b
+                selectedBranch === b.name
                   ? 'bg-ff-secondary text-white shadow-md'
                   : 'bg-slate-100 text-ff-secondary hover:bg-slate-200'
               }`}
             >
-              {b}
+              {b.name}
             </button>
           ))}
         </div>
@@ -287,49 +223,48 @@ export function ContactUsPage() {
           </h3>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
-            <a
-              href={`mailto:${activeContact.email}`}
-              className="flex items-center gap-2 text-ff-secondary font-medium hover:underline"
-            >
-              ✉️ {activeContact.email}
-            </a>
-            <span className="hidden sm:inline text-slate-300">•</span>
-            <a
-              href={`tel:${activeContact.phone}`}
-              className="flex items-center gap-2 text-ff-secondary font-medium hover:underline"
-            >
-              📞 {activeContact.phone}
-            </a>
+            {activeContact.email && (
+              <a
+                href={`mailto:${activeContact.email}`}
+                className="flex items-center gap-2 text-ff-secondary font-medium hover:underline"
+              >
+                Email: {activeContact.email}
+              </a>
+            )}
+            {activeContact.email && activeContact.phone && <span className="hidden sm:inline text-slate-300">•</span>}
+            {activeContact.phone && (
+              <a
+                href={`tel:${activeContact.phone}`}
+                className="flex items-center gap-2 text-ff-secondary font-medium hover:underline"
+              >
+                Phone: {activeContact.phone}
+              </a>
+            )}
           </div>
 
-          <div className="pt-2 flex items-center justify-center gap-4">
-            <a
-              href={activeContact.facebook}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 rounded-[50px] bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors"
-            >
-              Facebook
-            </a>
-            <a
-              href={activeContact.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 rounded-[50px] bg-pink-600 text-white text-xs font-bold hover:bg-pink-700 transition-colors"
-            >
-              Instagram
-            </a>
+          <div className="pt-2 flex max-w-full flex-wrap items-center justify-center gap-3 overflow-hidden">
+            {activeContact.whatsapp && (
+              <a href={activeContact.whatsapp} target="_blank" rel="noopener noreferrer" className="max-w-full px-4 py-2 rounded-[50px] bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors">WhatsApp</a>
+            )}
+            {activeContact.facebook && (
+              <a href={activeContact.facebook} target="_blank" rel="noopener noreferrer" className="max-w-full px-4 py-2 rounded-[50px] bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors">Facebook</a>
+            )}
+            {activeContact.instagram && (
+              <a href={activeContact.instagram} target="_blank" rel="noopener noreferrer" className="max-w-full px-4 py-2 rounded-[50px] bg-pink-600 text-white text-xs font-bold hover:bg-pink-700 transition-colors">Instagram</a>
+            )}
+            {activeContact.youtube && (
+              <a href={activeContact.youtube} target="_blank" rel="noopener noreferrer" className="max-w-full px-4 py-2 rounded-[50px] bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors">YouTube</a>
+            )}
+            {activeContact.website && (
+              <a href={activeContact.website} target="_blank" rel="noopener noreferrer" className="max-w-full px-4 py-2 rounded-[50px] bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors">Website</a>
+            )}
           </div>
 
-          <div className="pt-2 border-t border-slate-200 text-xs text-slate-500">
-            Global Mail:{' '}
-            <a
-              href="mailto:info@swordandspirit.org"
-              className="text-ff-alternate font-bold hover:underline"
-            >
-              info@swordandspirit.org
-            </a>
-          </div>
+          {!activeContact.email && !activeContact.phone && !activeContact.whatsapp && !activeContact.facebook && !activeContact.instagram && !activeContact.youtube && !activeContact.website && (
+            <p className="pt-2 border-t border-slate-200 text-xs text-slate-500">
+              Contact details have not been added for this branch yet.
+            </p>
+          )}
         </div>
       </section>
 
@@ -394,8 +329,8 @@ export function ContactUsPage() {
                     className="w-full h-12 px-4 rounded-[12px] border border-slate-300 bg-white text-ff-secondary text-sm focus:outline-none focus:border-ff-secondary"
                   >
                     {branches.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
+                      <option key={b.id || b.name} value={b.name}>
+                        {b.name}
                       </option>
                     ))}
                   </select>
@@ -439,37 +374,8 @@ export function ContactUsPage() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {actionCards.map((card) =>
-            card.path ? (
-              <Link
-                key={card.title}
-                to={card.path}
-                className="bg-slate-50 border border-slate-200 rounded-[20px] p-6 flex items-center justify-between hover:bg-ff-secondary hover:text-white transition-colors group shadow-sm"
-              >
-                <span className="font-bold text-base group-hover:text-white">
-                  {card.title}
-                </span>
-                <span className="group-hover:translate-x-1 transition-transform">
-                  <ChevronRight className="w-5 h-5" />
-                </span>
-              </Link>
-            ) : (
-              <button
-                key={card.title}
-                type="button"
-                onClick={card.action}
-                className="bg-slate-50 border border-slate-200 rounded-[20px] p-6 flex items-center justify-between hover:bg-ff-secondary hover:text-white transition-colors group shadow-sm text-left"
-              >
-                <span className="font-bold text-base group-hover:text-white">
-                  {card.title}
-                </span>
-                <span className="group-hover:translate-x-1 transition-transform">
-                  <ChevronRight className="w-5 h-5" />
-                </span>
-              </button>
-            )
-          )}
+        <div className="mx-auto w-full max-w-[560px]">
+          <QuickActionButtons />
         </div>
       </section>
 
@@ -494,13 +400,6 @@ export function ContactUsPage() {
           </div>
         </div>
       )}
-
-      {/* SIGN UP MODAL */}
-      <SignUpModal
-        isOpen={signUpOpen}
-        onClose={() => setSignUpOpen(false)}
-        defaultMinistry="Volunteer Service"
-      />
 
       {/* 5. SITE FOOTER */}
       <SiteFooter />

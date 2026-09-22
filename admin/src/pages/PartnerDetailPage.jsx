@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
 import ChoiceDropdown from '../components/ui/ChoiceDropdown';
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
 import { useAuth } from '../auth/AuthProvider';
 import { firestore } from '../lib/firebase';
 
@@ -140,6 +141,7 @@ function buildDraft(partner) {
 
 export default function PartnerDetailPage() {
   const { partnerId } = useParams();
+  const navigate = useNavigate();
   const { user, roles, profile } = useAuth();
   const canAccessPartners = roles.some((role) => partnerAccessRoles.includes(role));
   const canManageAll = roles.includes('super_admin') || roles.includes('global_editor');
@@ -148,6 +150,8 @@ export default function PartnerDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [partner, setPartner] = useState(null);
@@ -469,6 +473,19 @@ export default function PartnerDetailPage() {
     }
   }
 
+  async function handleDeletePartner() {
+    if (!partner?.id) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(firestore, 'partners', partner.id));
+      navigate('/workspace/partners', { replace: true });
+    } catch {
+      setError('The partner could not be deleted right now. Check permissions.');
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  }
+
   if (!canAccessPartners) {
     return <Navigate to="/access-denied" replace />;
   }
@@ -487,11 +504,20 @@ export default function PartnerDetailPage() {
         <section className="flex flex-wrap items-center justify-between gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Partners</p>
-            <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">Partner details</h1>
+            <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">{loading ? 'Loading partner…' : partnerName(partner)}</h1>
           </div>
-          <Link to="/workspace/partners" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">
-            Back to partners
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="rounded-full border border-red-500/30 px-5 py-3 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+            >
+              Delete partner
+            </button>
+            <Link to="/workspace/partners" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">
+              Back to partners
+            </Link>
+          </div>
         </section>
 
         {(error || message) && (
@@ -790,6 +816,16 @@ export default function PartnerDetailPage() {
           </>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        open={deleteOpen}
+        title="Delete partner"
+        itemName={partnerName(partner)}
+        message="Are you sure you want to delete this partner record? This will permanently remove their kingdom partnership details and linked records."
+        loading={deleting}
+        onConfirm={handleDeletePartner}
+        onClose={() => setDeleteOpen(false)}
+      />
     </main>
   );
 }

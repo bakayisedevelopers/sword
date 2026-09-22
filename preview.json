@@ -14,16 +14,6 @@
       "type": "vite-web",
       "directory": "admin",
       "start": "npm run dev:raw"
-    },
-    {
-      "id": "flutter-website",
-      "type": "static-web",
-      "directory": "flutter-website",
-      "start": "node C:/Commander/PreviewRouter/dist/static-server.js --root build/web",
-      "build": {
-        "command": "flutter build web",
-        "artifact": "build/web"
-      }
     }
   ]
 }

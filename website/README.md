@@ -1,11 +1,48 @@
-# SSMI Website React Migration
+# SSMI Website
 
-This directory is the destination workspace for migrating the existing Flutter website in `../flutter-website/` to React, Vite, and Tailwind CSS.
+The `website/` app is the production public website for Sword & Spirit Ministries.
 
-`../flutter-website/` is the read-only source of truth for visual appearance, behavior, assets, routes, Firebase access, Firestore collection names, and page functionality. Do not modify it during migration work.
+It is a React + Vite + Tailwind app deployed to Firebase Hosting target `website`.
 
-The master migration plan is:
+The previous Flutter migration source has been removed from this repository. This React app is now the active source of truth for the public site.
 
-`docs/MIGRATION_PLAN.md`
+## Commands
 
-Start every migration task by reading that document, then re-inspect the relevant Flutter source files before implementing the approved phase or page. This workspace is currently Phase 0 scaffold only; no Flutter page has been migrated.
+```bash
+npm install
+npm run dev
+npm run build
+```
+
+Deploy only the website from the repository root:
+
+```bash
+npx firebase-tools deploy --only hosting:website
+```
+
+## Important Areas
+
+- `src/app/routes.jsx` - Public route table.
+- `src/app/App.jsx` - App-level shell/providers.
+- `src/components/layout/` - Header, footer, mobile drawer.
+- `src/components/common/` - Shared website sections such as action buttons and album release card.
+- `src/components/modals/` - Form and sign-up modals.
+- `src/lib/firebase.js` - Firebase app setup.
+- `src/lib/firestore.js` - Firestore helpers and collection constants.
+- `src/pages/` - Public pages and route-level page components.
+- `src/styles/index.css` - Global styles and scrollbar hiding.
+
+Additional developer notes: `docs/DEVELOPER_GUIDE.md`.
+
+## Dynamic Content
+
+Most content is read from Firestore and managed by the admin app:
+
+- Branch pages and giving data.
+- Contact details and social links.
+- Events and registrations.
+- Ministry content and sign-ups.
+- Homepage latest sermon/year theme/album links.
+- Requests created by contact/prayer/care forms.
+
+Avoid adding hard-coded branch-specific data when a Firestore field exists.

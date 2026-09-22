@@ -12,6 +12,12 @@ function registrationName(registration) {
   return 'Unnamed registration';
 }
 
+function registrationEmail(registration) {
+  if (registration?.email) return registration.email;
+  const match = (registration?.message || '').match(/Email:\s*([^\s\n\r]+)/i);
+  return match ? match[1] : '';
+}
+
 function initials(value) {
   return `${value || ''}`
     .split(/\s+/)
@@ -65,6 +71,9 @@ function RegistrationRow({ registration, eventDoc }) {
           {registration.branch ? <span className="shrink-0 rounded-full border border-brand-gold/30 px-2 py-0.5 text-[0.68rem] font-semibold text-brand-gold sm:hidden">{initials(registration.branch)}</span> : null}
           {registration.eventName ? <span className="shrink-0 rounded-full border border-white/10 px-2 py-0.5 text-[0.68rem] font-semibold text-slate-300 sm:hidden">{initials(registration.eventName)}</span> : null}
         </div>
+        {registrationEmail(registration) ? (
+          <p className="mt-0.5 truncate text-xs text-slate-400">{registrationEmail(registration)}</p>
+        ) : null}
       </div>
 
       <div className="hidden min-w-0 flex-1 items-center gap-2 text-sm text-slate-400 sm:flex">
@@ -225,7 +234,7 @@ export default function RegistrationsWorkspacePage() {
           <section className="rounded-[1.6rem] border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100">{error}</section>
         ) : null}
 
-        <section className="flex justify-center">
+        <section data-tour-id="registrations-tabs" className="flex justify-center">
           <div className="inline-flex rounded-full border border-white/10 bg-slate-950/60 p-1">
             <ToggleTab active={activeTab === 'new'} onClick={() => setActiveTab('new')}>New registrations</ToggleTab>
             <ToggleTab active={activeTab === 'all'} onClick={() => setActiveTab('all')}>All registrations</ToggleTab>
@@ -233,7 +242,7 @@ export default function RegistrationsWorkspacePage() {
         </section>
 
         <section className="space-y-5 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
-          <div className={`grid gap-4 ${activeTab === 'all' ? 'md:grid-cols-[1fr_14rem_14rem]' : 'md:grid-cols-[1fr_14rem]'}`}>
+          <div data-tour-id="registrations-filters" className={`grid gap-4 ${activeTab === 'all' ? 'md:grid-cols-[1fr_14rem_14rem]' : 'md:grid-cols-[1fr_14rem]'}`}>
             <TextField label="Search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, phone, branch, or event" />
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Filter by branch</span>
@@ -253,7 +262,7 @@ export default function RegistrationsWorkspacePage() {
             ) : null}
           </div>
 
-          <div className="space-y-3">
+          <div data-tour-id="registrations-list" className="space-y-3">
             {visibleRegistrations.map((registration) => (
               <RegistrationRow key={registration.id} registration={registration} eventDoc={eventsByTitle.get(registration.eventName)} />
             ))}

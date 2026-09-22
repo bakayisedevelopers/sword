@@ -22,14 +22,15 @@ export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfi
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Analytics (browser only)
 export let analytics = null;
-if (typeof window !== 'undefined') {
-  isSupported().then((yes) => {
-    if (yes) {
-      analytics = getAnalytics(app);
-    }
-  });
+
+export async function initializeAnalyticsWithConsent() {
+  if (analytics || typeof window === 'undefined') return analytics;
+  const yes = await isSupported();
+  if (yes) {
+    analytics = getAnalytics(app);
+  }
+  return analytics;
 }
 
 export default app;

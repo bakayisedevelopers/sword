@@ -94,11 +94,9 @@ export function SocialsPage() {
 
           <button
             type="button"
-            onClick={() => console.log('My Dashboard clicked')}
+            onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
             className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-          >
-            My Dashboard
-          </button>
+          >Discipleship</button>
         </div>
       </div>
 
@@ -120,11 +118,9 @@ export function SocialsPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => console.log('Dashboard clicked')}
+              onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
               className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-sm font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-            >
-              Dashboard
-            </button>
+            >Discipleship</button>
             <button
               type="button"
               onClick={toggleDrawer}

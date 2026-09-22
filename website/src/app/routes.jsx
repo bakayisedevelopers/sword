@@ -4,6 +4,7 @@ import { PageShell } from '../components/layout/PageShell.jsx';
 import { PageContainer } from '../components/layout/PageContainer.jsx';
 import { LocationsPage } from '../pages/LocationsPage.jsx';
 import { BranchTemplatePage } from '../pages/BranchTemplatePage.jsx';
+import { BranchOrMinistryPage } from '../pages/BranchOrMinistryPage.jsx';
 import { BranchGivePage } from '../pages/BranchGivePage.jsx';
 import { BeyondTithePage } from '../pages/BeyondTithePage.jsx';
 import { WatchPage } from '../pages/WatchPage.jsx';
@@ -123,27 +124,29 @@ export const router = createBrowserRouter([
   { path: '/beyond-tithe', element: <BeyondTithePage /> },
   { path: '/events', element: <EventsPage /> },
   { path: '/event', element: <EventPage /> },
-  { path: '/school-of-ministry', element: <SchoolOfMinistryPage /> },
-  { path: '/super-kids', element: <SuperKidsPage /> },
+  { path: '/school-of-ministry', element: <MinistryPage /> },
+  { path: '/super-kids', element: <MinistryPage /> },
   { path: '/register', element: <RegisterPage /> },
-  { path: '/youth', element: <YouthPage /> },
-  { path: '/baptism', element: <BaptismPage /> },
+  { path: '/youth', element: <MinistryPage /> },
+  { path: '/baptism', element: <MinistryPage /> },
   { path: '/privacy-policy', element: <PrivacyPolicyPage /> },
-  { path: '/welfare', element: <WelfarePage /> },
+  { path: '/welfare', element: <MinistryPage /> },
   { path: '/e-resources-center', element: <EResourcesCenterPage /> },
-  { path: '/couples', element: <CouplesPage /> },
-  { path: '/for-men', element: <ForMenPage /> },
-  { path: '/for-women', element: <ForWomenPage /> },
-  { path: '/fellowship', element: <FellowshipPage /> },
+  { path: '/couples', element: <MinistryPage /> },
+  { path: '/for-couples', element: <MinistryPage /> },
+  { path: '/for-men', element: <MinistryPage /> },
+  { path: '/for-women', element: <MinistryPage /> },
+  { path: '/fellowship', element: <MinistryPage /> },
   { path: '/follow-jesus', element: <FollowJesusPage /> },
   { path: '/podcasts', element: <PodcastsPage /> },
-  { path: '/camp-yolo', element: <CampYoloPage /> },
-  { path: '/fire-conference', element: <FireConferencePage /> },
-  { path: '/superman-conference', element: <SupermanConferencePage /> },
+  { path: '/camp-yolo', element: <MinistryPage /> },
+  { path: '/fire-conference', element: <MinistryPage /> },
+  { path: '/superman-conference', element: <MinistryPage /> },
   { path: '/contact-us', element: <ContactUsPage /> },
-  { path: '/young-adults', element: <YoungAdultsPage /> },
-  { path: '/singles', element: <SinglesPage /> },
-  { path: '/youth-template', element: <YouthTemplatePage /> },
+  { path: '/young-adults', element: <MinistryPage /> },
+  { path: '/singles', element: <MinistryPage /> },
+  { path: '/youth-template', element: <MinistryPage /> },
+  { path: '/ministry/:slug', element: <MinistryPage /> },
   { path: '/socials', element: <SocialsPage /> },
 
   // Legacy Branch routes
@@ -157,8 +160,9 @@ export const router = createBrowserRouter([
   { path: '/legacy/online', element: <BranchTemplatePage /> },
   { path: '/legacy/mbabane', element: <BranchTemplatePage /> },
 
-  // Dynamic Branch Route
-  { path: '/:branchSlug', element: <BranchTemplatePage /> },
+  // Dynamic Branch or Ministry Route
+  { path: '/:slug', element: <BranchOrMinistryPage /> },
+  { path: '/:branchSlug', element: <BranchOrMinistryPage /> },
 
   // 404 Fallback
   { path: '*', element: <NotFoundPlaceholder /> },

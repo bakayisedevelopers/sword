@@ -12,7 +12,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@ssmi/functions': path.resolve(repoRoot, 'functions/src/index.js'),
-      '@ssmi/flutter-assets': path.resolve(repoRoot, 'flutter-website/assets/images'),
+      '@ssmi/flutter-assets': path.resolve(__dirname, 'src/assets'),
     },
   },
   server: {

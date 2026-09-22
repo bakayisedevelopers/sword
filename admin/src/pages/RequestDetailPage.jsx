@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
 import ChoiceDropdown from '../components/ui/ChoiceDropdown';
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
 import { useAuth } from '../auth/AuthProvider';
 import { firestore } from '../lib/firebase';
 
@@ -79,6 +80,7 @@ function TogglePill({ active, children, onClick, disabled = false }) {
 
 export default function RequestDetailPage() {
   const { requestId } = useParams();
+  const navigate = useNavigate();
   const { user, roles, profile } = useAuth();
   const canAccess = roles.some((role) => requestAccessRoles.includes(role));
   const canReviewAll = roles.includes('super_admin') || roles.includes('global_editor') || roles.includes('care_team');
@@ -93,6 +95,8 @@ export default function RequestDetailPage() {
   const [adminNotes, setAdminNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
@@ -233,6 +237,19 @@ export default function RequestDetailPage() {
   const chatUrl = whatsappUrl(request?.cell);
   const status = request?.status || (request?.acknowledged ? 'in_progress' : 'new');
 
+  async function handleDeleteRequest() {
+    if (!request?.id) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(firestore, 'requests', request.id));
+      navigate('/workspace/requests', { replace: true });
+    } catch {
+      setError('The request could not be deleted right now. Check permissions.');
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  }
+
   if (!canAccess) return <Navigate to="/access-denied" replace />;
   if (!requestId) return <Navigate to="/workspace/requests" replace />;
   if (!loading && !request && !error) return <Navigate to="/workspace/requests" replace />;
@@ -245,9 +262,18 @@ export default function RequestDetailPage() {
             <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Request</p>
             <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">{loading ? 'Loading request…' : requestName(request)}</h1>
           </div>
-          <Link to="/workspace/requests" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">
-            Back to requests
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="rounded-full border border-red-500/30 px-5 py-3 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+            >
+              Delete request
+            </button>
+            <Link to="/workspace/requests" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">
+              Back to requests
+            </Link>
+          </div>
         </section>
 
         {(error || message) && (
@@ -459,6 +485,16 @@ export default function RequestDetailPage() {
           </>
         ) : null}
       </div>
+
+      <ConfirmDeleteModal
+        open={deleteOpen}
+        title="Delete request"
+        itemName={`${requestName(request)} (${request?.type || 'Request'})`}
+        message="Are you sure you want to delete this pastoral care / prayer request document? This action is permanent and cannot be undone."
+        loading={deleting}
+        onConfirm={handleDeleteRequest}
+        onClose={() => setDeleteOpen(false)}
+      />
     </main>
   );
 }

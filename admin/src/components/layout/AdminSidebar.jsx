@@ -39,6 +39,34 @@ function Badge({ count }) {
   );
 }
 
+function NavIcon({ name, className = 'h-5 w-5' }) {
+  const paths = {
+    dashboard: <><path d="M4 13h6V4H4v9Z" /><path d="M14 20h6V4h-6v16Z" /><path d="M4 20h6v-3H4v3Z" /></>,
+    inbox: <><path d="M4 5h16v10l-3 4H7l-3-4V5Z" /><path d="M4 15h5l2 2h2l2-2h5" /></>,
+    publishing: <><path d="M5 19h14" /><path d="M7 16V5h10v11" /><path d="M9 8h6" /><path d="M9 11h6" /></>,
+    structure: <><path d="M12 4v16" /><path d="M5 8h14" /><path d="M6 16h12" /><circle cx="12" cy="8" r="2" /></>,
+    partners: <><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" /><path d="M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" /><path d="M3.5 19c.8-3 2.4-4.5 4.5-4.5s3.7 1.5 4.5 4.5" /><path d="M11.5 19c.8-3 2.4-4.5 4.5-4.5s3.7 1.5 4.5 4.5" /></>,
+    help: <><circle cx="12" cy="12" r="8" /><path d="M9.8 9.6A2.4 2.4 0 0 1 12.2 8c1.5 0 2.6.9 2.6 2.2 0 1.8-2.2 2.1-2.2 3.8" /><path d="M12 17h.01" /></>,
+    collapse: <><path d="M15 18l-6-6 6-6" /><path d="M20 12H9" /></>,
+    expand: <><path d="M9 18l6-6-6-6" /><path d="M4 12h11" /></>,
+  };
+
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {paths[name] || paths.help}
+    </svg>
+  );
+}
+
+function groupIconName(title) {
+  const key = `${title || ''}`.toLowerCase();
+  if (key.includes('inbox')) return 'inbox';
+  if (key.includes('publishing')) return 'publishing';
+  if (key.includes('structure')) return 'structure';
+  if (key.includes('partner') || key.includes('access')) return 'partners';
+  return 'structure';
+}
+
 function SidebarGroup({ group, open, onToggle, onNavigate, badges }) {
   const hasActiveChild = group.items.some((item) => item._active);
   const groupBadgeCount = group.items.reduce((total, item) => total + (badges[item.key] || 0), 0);
@@ -81,7 +109,7 @@ function SidebarGroup({ group, open, onToggle, onNavigate, badges }) {
   );
 }
 
-export default function AdminSidebar({ open = false, onClose }) {
+export default function AdminSidebar({ open = false, onClose, collapsed = false, onToggleCollapsed }) {
   const { user, profile, roles, signOut } = useAuth();
   const location = useLocation();
   const [openGroup, setOpenGroup] = useState('Inbox');
@@ -119,11 +147,22 @@ export default function AdminSidebar({ open = false, onClose }) {
         className={`fixed inset-0 z-40 bg-slate-950/70 transition lg:hidden ${open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
       />
       <aside
+        data-tour-id="admin-sidebar"
         className={[
-          'fixed left-0 top-0 z-50 flex h-[100dvh] w-[86vw] max-w-[20rem] -translate-x-full flex-col border-r border-white/10 bg-slate-950 p-4 shadow-soft transition-transform duration-200 lg:sticky lg:top-6 lg:z-0 lg:h-[calc(100dvh-7rem)] lg:w-auto lg:max-w-none lg:translate-x-0 lg:rounded-[2rem] lg:border lg:bg-white/5 lg:overflow-hidden',
+          'fixed left-0 top-0 z-50 flex h-[100dvh] w-[86vw] max-w-[20rem] -translate-x-full flex-col border-r border-white/10 bg-slate-950 p-4 shadow-soft transition-all duration-200 lg:sticky lg:top-6 lg:z-0 lg:h-[calc(100dvh-7rem)] lg:w-auto lg:max-w-none lg:translate-x-0 lg:rounded-[2rem] lg:border lg:bg-white/5 lg:overflow-hidden',
+          collapsed ? 'lg:px-3' : '',
           open ? 'translate-x-0' : '',
         ].join(' ')}
       >
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          className="mb-4 hidden h-10 w-full items-center justify-center rounded-[1rem] border border-white/10 bg-slate-900/80 text-xs font-bold uppercase tracking-[0.16em] text-brand-gold transition hover:border-brand-gold/50 hover:bg-brand-gold/10 lg:flex"
+          title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+        >
+          <NavIcon name={collapsed ? 'expand' : 'collapse'} />
+        </button>
+
         <nav className="flex-1 space-y-4 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <NavLink
             to="/"
@@ -132,29 +171,64 @@ export default function AdminSidebar({ open = false, onClose }) {
             className="block rounded-[1.35rem] border border-white/10 bg-slate-900/80 px-4 py-3 transition hover:border-brand-gold/40 hover:bg-brand-gold/10"
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-white">Dashboard</span>
-              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-gold">Home</span>
+              <span className={`text-sm font-semibold text-white ${collapsed ? 'lg:hidden' : ''}`}>Dashboard</span>
+              <span className={`text-xs font-semibold uppercase tracking-[0.18em] text-brand-gold ${collapsed ? 'lg:mx-auto' : ''}`}>{collapsed ? <NavIcon name="dashboard" /> : 'Home'}</span>
             </div>
           </NavLink>
 
-          {groups.map((group) => (
-            <SidebarGroup
-              key={group.title}
-              group={group}
-              open={openGroup === group.title}
-              onToggle={() => setOpenGroup((current) => (current === group.title ? '' : group.title))}
-              onNavigate={onClose}
-              badges={badges}
-            />
-          ))}
+          {collapsed ? (
+            <div className="hidden space-y-3 lg:block">
+              {groups.map((group) => {
+                return (
+                  <button
+                    key={group.title}
+                    type="button"
+                    onClick={() => {
+                      onToggleCollapsed?.();
+                      setOpenGroup(group.title);
+                    }}
+                    className="relative flex h-11 w-full items-center justify-center rounded-[1rem] border border-white/10 bg-slate-900/80 text-sm font-bold text-slate-300 transition hover:border-brand-gold hover:text-brand-gold"
+                    title={group.title}
+                  >
+                    <NavIcon name={groupIconName(group.title)} />
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            groups.map((group) => (
+              <SidebarGroup
+                key={group.title}
+                group={group}
+                open={openGroup === group.title}
+                onToggle={() => setOpenGroup((current) => (current === group.title ? '' : group.title))}
+                onNavigate={onClose}
+                badges={badges}
+              />
+            ))
+          )}
         </nav>
 
-        <div className="mt-5 border-t border-white/10 pt-4">
+        <div className="mt-5 space-y-3">
+          <NavLink
+            to="/help"
+            onClick={onClose}
+            data-tour-id="admin-help-link"
+            className="block rounded-[1.35rem] border border-brand-gold/20 bg-brand-gold/10 px-4 py-3 transition hover:border-brand-gold/50 hover:bg-brand-gold/15"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className={`text-sm font-semibold text-white ${collapsed ? 'lg:hidden' : ''}`}>Help</span>
+              <span className={`text-xs font-semibold uppercase tracking-[0.18em] text-brand-gold ${collapsed ? 'lg:mx-auto' : ''}`}>{collapsed ? <NavIcon name="help" /> : 'Guide'}</span>
+            </div>
+          </NavLink>
+
+          <div className="border-t border-white/10 pt-4">
           <div className="rounded-[1.35rem] border border-white/10 bg-slate-900/80 px-4 py-3 transition hover:border-brand-gold/40 hover:bg-brand-gold/10">
             <div className="flex items-center justify-between gap-3">
               <NavLink to="/profile" onClick={onClose} className="min-w-0 flex-1 text-left">
-                <span className="block truncate text-sm font-semibold text-white">{nameLabel}</span>
-                {user?.email ? <span className="block truncate text-xs text-slate-400 mt-0.5">{user.email}</span> : null}
+                <span className={`block truncate text-sm font-semibold text-white ${collapsed ? 'lg:hidden' : ''}`}>{nameLabel}</span>
+                {user?.email ? <span className={`block truncate text-xs text-slate-400 mt-0.5 ${collapsed ? 'lg:hidden' : ''}`}>{user.email}</span> : null}
+                <span className={`hidden text-center text-sm font-bold text-brand-gold ${collapsed ? 'lg:block' : ''}`}>{nameLabel.slice(0, 1).toUpperCase()}</span>
               </NavLink>
               <button
                 type="button"
@@ -163,7 +237,7 @@ export default function AdminSidebar({ open = false, onClose }) {
                   await signOut();
                   onClose?.();
                 }}
-                className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-slate-300 transition hover:border-brand-gold hover:text-brand-gold"
+                className={`mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-slate-300 transition hover:border-brand-gold hover:text-brand-gold ${collapsed ? 'lg:hidden' : ''}`}
               >
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M10 17l5-5-5-5" />
@@ -172,6 +246,7 @@ export default function AdminSidebar({ open = false, onClose }) {
                 </svg>
               </button>
             </div>
+          </div>
           </div>
         </div>
       </aside>

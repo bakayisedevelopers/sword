@@ -7,6 +7,13 @@ import { SignUpModal } from '../components/modals/SignUpModal.jsx';
 import { SiteFooter } from '../components/layout/SiteFooter.jsx';
 import { MobileDrawer } from '../components/layout/MobileDrawer.jsx';
 
+function getMinistryPath(m) {
+  if (m?.slug) return `/${m.slug}`;
+  const name = m?.name || m?.ministryName || '';
+  const slug = name.toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return slug ? `/${slug}` : `/ministry?id=${m?.id || name}`;
+}
+
 /**
  * MinistriesPage reproducing MinistriesWidget:
  * flutter-website/lib/actions/ministries/ministries_widget.dart
@@ -130,11 +137,9 @@ export function MinistriesPage() {
 
             <button
               type="button"
-              onClick={() => console.log('My Dashboard clicked')}
+              onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
               className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-            >
-              My Dashboard
-            </button>
+            >Discipleship</button>
           </div>
         </div>
       </div>
@@ -165,11 +170,9 @@ export function MinistriesPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => console.log('Dashboard clicked')}
+                onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
                 className="h-9 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-sm font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-              >
-                Dashboard
-              </button>
+              >Discipleship</button>
               <button
                 type="button"
                 onClick={toggleDrawer}
@@ -195,7 +198,7 @@ export function MinistriesPage() {
       {/* 2. TITLE & FEWDS INTRO */}
       <section className="w-[90%] max-w-[1200px] mx-auto my-12 text-center">
         <h1 className="text-3xl sm:text-4xl font-bold text-ff-secondary mb-4">
-          Our Minstries
+          Our Ministries
         </h1>
         <p className="text-base sm:text-lg text-slate-700 leading-relaxed max-w-3xl mx-auto">
           Our Ministries are divided into 5 Categories namely Fellowship, Evangelism, Worship, Discipleship and Service.
@@ -249,7 +252,7 @@ export function MinistriesPage() {
 
                 <div className="flex gap-3 pt-4 border-t border-slate-100">
                   <Link
-                    to={`/ministry?id=${m.id || m.name}`}
+                    to={getMinistryPath(m)}
                     className="flex-1 py-3 rounded-[50px] bg-ff-secondary text-white text-center text-xs font-bold hover:bg-slate-800 transition-colors"
                   >
                     See Details

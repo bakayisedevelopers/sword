@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFirestoreQuery } from '../../hooks/useFirestoreQuery.js';
 import { COLLECTIONS, createRecord } from '../../lib/firestore.js';
+import { AlbumReleaseCard } from './AlbumReleaseCard.jsx';
 
 /**
  * FooterTope component reproducing FooterTopeWidget:
@@ -46,63 +47,8 @@ export function FooterTope() {
     <div className="w-full bg-white py-6">
       <div className="max-w-[1100px] mx-auto px-4">
         <div className="flex flex-wrap items-center justify-center gap-6">
-          {/* Left Card: Worship Album Promotional Card */}
-          <div
-            className="w-full max-w-[500px] h-[500px] rounded-[30px] border border-ff-secondary relative overflow-hidden flex flex-col justify-end bg-cover bg-center shadow-sm"
-            style={{ backgroundImage: "url('/assets/images/Worship_Album.png')" }}
-          >
-            <div className="p-6">
-              <div className="w-full max-w-[350px] mx-auto bg-white/90 backdrop-blur-sm rounded-[30px] border-2 border-white p-4 flex flex-col items-center shadow-md">
-                {/* Rotating Album art thumbnail */}
-                <div className="flex items-center justify-center mb-2.5">
-                  <div
-                    className="w-10 h-10 rounded-full border border-ff-secondary bg-cover bg-center animate-spin"
-                    style={{
-                      backgroundImage: "url('/assets/images/Worship_Album.png')",
-                      animationDuration: '8s',
-                    }}
-                  />
-                  <span className="ml-2.5 text-lg font-bold text-ff-primary-text">
-                    Latest Release
-                  </span>
-                </div>
-
-                <div className="text-center mb-3">
-                  <span className="text-base font-bold text-ff-primary-text">
-                    Listen on your Platform
-                  </span>
-                </div>
-
-                {/* Music platforms */}
-                <div className="flex items-center justify-center gap-3">
-                  <a
-                    href="https://open.spotify.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 rounded-full bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors"
-                  >
-                    Spotify
-                  </a>
-                  <a
-                    href="https://music.apple.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 rounded-full bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors"
-                  >
-                    Apple Music
-                  </a>
-                  <a
-                    href="https://youtube.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 rounded-full bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors"
-                  >
-                    YouTube
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Left Card: Website-standard Album Release Card */}
+          <AlbumReleaseCard />
 
           {/* Right Card: Leave a Message Form */}
           <div className="w-full max-w-[500px] h-[500px] rounded-[20px] border border-ff-secondary p-4 flex flex-col justify-between bg-white shadow-sm">

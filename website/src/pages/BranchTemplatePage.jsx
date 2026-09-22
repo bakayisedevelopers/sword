@@ -227,6 +227,47 @@ function getBranchImage(branch, landing) {
   );
 }
 
+function getHeroVideoUrl(landing) {
+  return getImageValue(landing?.heroVideoUrl || landing?.heroVideoLink || landing?.heroVideo);
+}
+
+function getYouTubeEmbedUrl(url) {
+  const cleanUrl = getImageValue(url);
+  if (!cleanUrl) return '';
+  const match = cleanUrl.match(
+    /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/
+  );
+  if (!match) return '';
+  return `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1&loop=1&controls=0&rel=0&playlist=${match[1]}`;
+}
+
+function HeroVideo({ url, title }) {
+  const embedUrl = getYouTubeEmbedUrl(url);
+
+  if (embedUrl) {
+    return (
+      <iframe
+        src={embedUrl}
+        title={title}
+        allow="autoplay; encrypted-media; picture-in-picture"
+        allowFullScreen
+        className="absolute inset-0 h-full w-full border-0"
+      />
+    );
+  }
+
+  return (
+    <video
+      src={url}
+      className="absolute inset-0 h-full w-full object-cover"
+      autoPlay
+      muted
+      loop
+      playsInline
+    />
+  );
+}
+
 function getPastorImage(landing, fallback) {
   return getImageValue(landing?.pastorImageUrl || landing?.pastorImage) || fallback?.defaultPastorImage || PASTOR_IMAGE_FALLBACK;
 }
@@ -425,6 +466,8 @@ function BranchInfoPanel({ branch, branchAddress }) {
 }
 
 function GivingPanel({ branch }) {
+  if (!String(branch?.bankingDetails || '').trim()) return null;
+
   const paymentRows = [
     ['Banking Details', branch?.bankingDetails],
     ['Google Pay', branch?.googlepay],
@@ -436,10 +479,13 @@ function GivingPanel({ branch }) {
   if (paymentRows.length === 0) return null;
 
   return (
-    <div className="rounded-[24px] border border-ff-secondary bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-bold text-ff-secondary mb-4 border-b border-slate-200 pb-2">
-        Giving Details
-      </h2>
+    <div className="rounded-[30px] border border-ff-secondary bg-white p-6 shadow-sm sm:p-8">
+      <div className="mb-5 border-b border-slate-200 pb-4">
+        <span className="text-xs font-bold uppercase tracking-wider text-ff-alternate">Branch Giving</span>
+        <h2 className="mt-1 text-2xl font-bold text-ff-secondary">
+          Giving Details
+        </h2>
+      </div>
       <div className="space-y-3">
         {paymentRows.map(([label, value]) => {
           const isUrl = String(value).startsWith('http://') || String(value).startsWith('https://');
@@ -490,6 +536,55 @@ function PastorSection({ pastorImage, pastorBio }) {
   );
 }
 
+function EventsPanel({ branchName, branchEvents, displayEvents, eventsFilter, setEventsFilter }) {
+  if (branchEvents.length === 0) return null;
+
+  return (
+    <div className="min-h-[320px] flex-1 overflow-hidden rounded-[30px] border border-ff-secondary bg-ff-primary p-[15px] shadow-sm flex flex-col">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+        <h3 className="text-[18px] font-bold text-ff-primary-text">{branchName} Events</h3>
+        <div className="flex items-center gap-1 rounded-full border border-ff-secondary/30 bg-white/80 p-1 text-xs shadow-sm">
+          <button
+            type="button"
+            onClick={() => setEventsFilter('all')}
+            className={`rounded-full px-2.5 py-0.5 font-bold transition ${
+              eventsFilter === 'all' ? 'bg-ff-secondary text-white' : 'text-slate-600 hover:text-black'
+            }`}
+          >
+            All ({branchEvents.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setEventsFilter('global')}
+            className={`rounded-full px-2.5 py-0.5 font-bold transition ${
+              eventsFilter === 'global' ? 'bg-ff-secondary text-white' : 'text-slate-600 hover:text-black'
+            }`}
+          >
+            Global
+          </button>
+          <button
+            type="button"
+            onClick={() => setEventsFilter('branch')}
+            className={`rounded-full px-2.5 py-0.5 font-bold transition ${
+              eventsFilter === 'branch' ? 'bg-ff-secondary text-white' : 'text-slate-600 hover:text-black'
+            }`}
+          >
+            Campus
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 space-y-[10px] overflow-y-auto pr-1">
+        {displayEvents.map((event) => (
+          <EventCard key={event.id} event={event} isGlobal={isEventGlobal(event)} />
+        ))}
+        {displayEvents.length === 0 && (
+          <p className="py-6 text-center text-xs text-slate-500">No events match the selected filter.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SermonCard({ sermon }) {
   const url = getSermonUrl(sermon);
 
@@ -519,14 +614,36 @@ function SermonCard({ sermon }) {
   );
 }
 
-function EventCard({ event }) {
+function isEventGlobal(event) {
+  return (
+    event?.global === true ||
+    `${event?.branch_name || event?.branchName || ''}`.trim().toLowerCase() === 'global' ||
+    (Array.isArray(event?.branches) && event.branches.some((b) => `${b}`.trim().toLowerCase() === 'global'))
+  );
+}
+
+function isMinistryGlobal(ministry) {
+  return (
+    ministry?.global === true ||
+    (Array.isArray(ministry?.branches) && ministry.branches.some((b) => `${b}`.trim().toLowerCase() === 'global'))
+  );
+}
+
+function EventCard({ event, isGlobal }) {
   const eventUrl = event.location_link || event.locationLink;
 
   return (
     <div className="rounded-[20px] border border-ff-secondary/30 bg-white p-4 transition-all hover:border-ff-secondary hover:shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap mb-1">
-          <span className="rounded-[50px] bg-ff-secondary text-white px-2.5 py-0.5 text-[11px] font-bold">
+          <span
+            className={`rounded-[50px] px-2.5 py-0.5 text-[11px] font-bold ${
+              isGlobal ? 'bg-brand-gold text-slate-950' : 'bg-ff-secondary text-white'
+            }`}
+          >
+            {isGlobal ? '🌐 Global' : 'Campus Specific'}
+          </span>
+          <span className="rounded-[50px] bg-slate-100 text-ff-primary-text px-2.5 py-0.5 text-[11px] font-bold">
             {Number(event.price) > 0 ? `R${event.price}` : 'Free'}
           </span>
           {(event.date_details || event.dateDetails || event.date) && (
@@ -563,6 +680,74 @@ function EventCard({ event }) {
   );
 }
 
+function MinistryCard({ ministry, isGlobal }) {
+  const slug = ministry.slug || normalizeSlug(ministry.name || ministry.ministryName);
+  return (
+    <div className="rounded-[20px] border border-ff-secondary/30 bg-white p-4 transition-all hover:border-ff-secondary hover:shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span
+            className={`rounded-[50px] px-2.5 py-0.5 text-[11px] font-bold ${
+              isGlobal ? 'bg-brand-gold text-slate-950' : 'bg-ff-secondary text-white'
+            }`}
+          >
+            {isGlobal ? '🌐 Global' : 'Campus Specific'}
+          </span>
+          {ministry.FEWDS && (
+            <span className="text-xs font-semibold text-slate-500">
+              {ministry.FEWDS}
+            </span>
+          )}
+        </div>
+        <h4 className="text-base font-bold text-ff-secondary truncate">
+          {ministry.name || ministry.ministryName}
+        </h4>
+        {ministry.description && (
+          <p className="text-xs text-slate-600 line-clamp-2 mt-0.5">
+            {ministry.description}
+          </p>
+        )}
+      </div>
+
+      <div className="shrink-0">
+        <Link
+          to={slug ? `/${slug}` : `/ministries`}
+          className="px-4 py-2 rounded-[50px] bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition-colors inline-flex items-center gap-1"
+        >
+          <span>Explore</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function PodcastCard({ podcast }) {
+  const url = podcast.videoLink || podcast.link || podcast.url;
+  return (
+    <div className="rounded-[20px] border border-ff-secondary/20 bg-white p-4 text-left shadow-sm hover:border-ff-secondary hover:shadow-md transition-all flex flex-col justify-between gap-2">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h4 className="text-base font-bold text-ff-secondary line-clamp-1">{podcast.Title || podcast.title || 'Podcast Episode'}</h4>
+          {podcast.preacher && <p className="text-xs text-ff-alternate font-semibold mt-0.5">{podcast.preacher}</p>}
+        </div>
+        {url && (
+          <button
+            type="button"
+            onClick={() => launchUrl(url)}
+            className="rounded-[50px] bg-ff-secondary px-3.5 py-1 text-xs font-bold text-white hover:bg-slate-800 transition-colors inline-flex items-center gap-1 shrink-0"
+          >
+            <span>Listen</span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+      {podcast.description && <p className="text-xs text-slate-600 line-clamp-2 mt-1">{podcast.description}</p>}
+      {podcast.date && <p className="text-[11px] font-semibold text-slate-400 mt-1">{formatDateTime(podcast.date)}</p>}
+    </div>
+  );
+}
+
 export function BranchTemplatePage() {
   const { branchSlug: paramSlug } = useParams();
   const { toggleDrawer, setContactBranch } = useAppState();
@@ -572,8 +757,13 @@ export function BranchTemplatePage() {
   const slug = canonicalSlug;
 
   const { data: branches, loading: branchesLoading } = useFirestoreQuery(COLLECTIONS.BRANCHES);
-  const { data: sermons, loading: sermonsLoading } = useFirestoreQuery(COLLECTIONS.SERMONS);
-  const { data: events, loading: eventsLoading } = useFirestoreQuery(COLLECTIONS.EVENTS);
+  const { data: sermons = [], loading: sermonsLoading } = useFirestoreQuery(COLLECTIONS.SERMONS);
+  const { data: events = [], loading: eventsLoading } = useFirestoreQuery(COLLECTIONS.EVENTS);
+  const { data: ministries = [], loading: ministriesLoading } = useFirestoreQuery(COLLECTIONS.MINISTRIES);
+  const { data: podcasts = [], loading: podcastsLoading } = useFirestoreQuery(COLLECTIONS.PODCAST);
+
+  const [eventsFilter, setEventsFilter] = useState('all'); // 'all' | 'global' | 'branch'
+  const [ministriesFilter, setMinistriesFilter] = useState('all'); // 'all' | 'global' | 'branch'
 
   const branch = useMemo(() => {
     if (!canonicalSlug) return null;
@@ -645,6 +835,8 @@ export function BranchTemplatePage() {
   const branchAddress = branch?.location?.trim() || '';
   const heroDesktopImg = branch ? getBranchImage(branch, landing) : '';
   const heroMobileImg = getImageValue(landing.heroMobileImage || landing.heroImage) || heroDesktopImg;
+  const heroVideoUrl = getHeroVideoUrl(landing);
+  const showHeroVideo = (landing.heroMediaType || '').toLowerCase() === 'video' && heroVideoUrl;
   const pastorImg = getPastorImage(landing, officialFallback);
   const pastorBio = getPastorBio(landing, officialFallback);
   const serviceTimes = normalizeServiceTimes(
@@ -672,9 +864,42 @@ export function BranchTemplatePage() {
   const branchSermons = useMemo(
     () =>
       sermons
-        .filter((sermon) => branchMatchesName(sermon.branchName, branchName) || sameBranchReference(sermon.branch, branch))
+        .filter((sermon) => {
+          if (canonicalSlug === 'online') {
+            return (
+              branchMatchesName(sermon.branchName, 'Online') ||
+              branchMatchesName(sermon.branchName, 'EMalahleni') ||
+              sameBranchReference(sermon.branch, branch)
+            );
+          }
+          return (
+            branchMatchesName(sermon.branchName, branchName) ||
+            sameBranchReference(sermon.branch, branch)
+          );
+        })
         .sort((a, b) => (normalizeDate(b.date)?.getTime() || 0) - (normalizeDate(a.date)?.getTime() || 0)),
-    [sermons, branchName, branch]
+    [sermons, branchName, branch, canonicalSlug]
+  );
+
+  const branchPodcasts = useMemo(
+    () =>
+      podcasts
+        .filter((podcast) => {
+          const bName = podcast.branchName || podcast.branch_name || '';
+          if (canonicalSlug === 'online') {
+            return (
+              branchMatchesName(bName, 'Online') ||
+              branchMatchesName(bName, 'EMalahleni') ||
+              sameBranchReference(podcast.branch, branch)
+            );
+          }
+          return (
+            branchMatchesName(bName, branchName) ||
+            sameBranchReference(podcast.branch, branch)
+          );
+        })
+        .sort((a, b) => (normalizeDate(b.date)?.getTime() || 0) - (normalizeDate(a.date)?.getTime() || 0)),
+    [podcasts, branchName, branch, canonicalSlug]
   );
 
   const branchEvents = useMemo(
@@ -682,9 +907,9 @@ export function BranchTemplatePage() {
       events
         .filter(isFutureEvent)
         .filter((event) => {
+          if (isEventGlobal(event)) return true;
           const eventBranches = Array.isArray(event.branches) ? event.branches : [];
           return (
-            event.global === true ||
             branchMatchesName(event.branch_name || event.branchName, branchName) ||
             sameBranchReference(event.branch, branch) ||
             eventBranches.some((item) => branchMatchesName(item, branchName) || resolveCanonicalBranchSlug(item) === canonicalSlug)
@@ -693,6 +918,28 @@ export function BranchTemplatePage() {
         .sort((a, b) => (normalizeDate(a.date)?.getTime() || 0) - (normalizeDate(b.date)?.getTime() || 0)),
     [events, branchName, branch, canonicalSlug]
   );
+
+  const displayEvents = useMemo(() => {
+    if (eventsFilter === 'global') return branchEvents.filter(isEventGlobal);
+    if (eventsFilter === 'branch') return branchEvents.filter((e) => !isEventGlobal(e));
+    return branchEvents;
+  }, [branchEvents, eventsFilter]);
+
+  const branchMinistries = useMemo(() => {
+    return ministries.filter((ministry) => {
+      if (isMinistryGlobal(ministry)) return true;
+      const mBranches = Array.isArray(ministry.branches) ? ministry.branches : [];
+      return mBranches.some(
+        (b) => branchMatchesName(b, branchName) || resolveCanonicalBranchSlug(b) === canonicalSlug
+      );
+    });
+  }, [ministries, branchName, canonicalSlug]);
+
+  const displayMinistries = useMemo(() => {
+    if (ministriesFilter === 'global') return branchMinistries.filter(isMinistryGlobal);
+    if (ministriesFilter === 'branch') return branchMinistries.filter((m) => !isMinistryGlobal(m));
+    return branchMinistries;
+  }, [branchMinistries, ministriesFilter]);
 
   const navItems = [
     { name: 'Locations', path: '/locations' },
@@ -715,6 +962,7 @@ export function BranchTemplatePage() {
         branch: branchName,
         type: 'Message',
         message: formMessage.trim(),
+        date: new Date(),
       });
       setFormName('');
       setFormCell('');
@@ -753,13 +1001,15 @@ export function BranchTemplatePage() {
   return (
     <div className="min-h-screen bg-white text-ff-primary-text flex flex-col selection:bg-ff-primary selection:text-ff-primary-text">
       <div className="hidden lg:block w-[90%] max-w-[1440px] mx-auto mt-[30px] mb-[20px] h-[600px] rounded-[30px] border border-ff-secondary relative overflow-hidden shadow-lg bg-ff-primary">
-        {heroDesktopImg && (
+        {showHeroVideo ? (
+          <HeroVideo url={heroVideoUrl} title={`${branchName} hero video`} />
+        ) : heroDesktopImg ? (
           <img
             src={heroDesktopImg}
             alt={`${branchName} Banner`}
             className="absolute inset-0 h-full w-full object-cover"
           />
-        )}
+        ) : null}
 
         <div className="relative z-10 w-full p-5">
           <div className="w-full bg-ff-secondary rounded-[30px] border border-ff-secondary p-3 flex items-center justify-between shadow-md">
@@ -785,11 +1035,9 @@ export function BranchTemplatePage() {
 
             <button
               type="button"
-              onClick={() => console.log('My Dashboard clicked')}
+              onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
               className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-            >
-              My Dashboard
-            </button>
+            >Discipleship</button>
           </div>
         </div>
 
@@ -808,13 +1056,15 @@ export function BranchTemplatePage() {
       </div>
 
       <div className="block lg:hidden w-[92%] max-w-[500px] mx-auto mt-[20px] mb-[20px] h-[520px] sm:h-[600px] rounded-[30px] border border-ff-secondary relative overflow-hidden shadow-lg bg-ff-primary">
-        {heroMobileImg && (
+        {showHeroVideo ? (
+          <HeroVideo url={heroVideoUrl} title={`${branchName} hero video`} />
+        ) : heroMobileImg ? (
           <img
             src={heroMobileImg}
             alt={`${branchName} Banner`}
             className="absolute inset-0 h-full w-full object-cover"
           />
-        )}
+        ) : null}
 
         <div className="relative z-10 w-full p-2.5">
           <div className="w-full bg-ff-secondary rounded-[20px] p-2.5 flex items-center justify-between border border-transparent shadow-[0_0_30px_rgba(25,36,49,0.5)]">
@@ -829,11 +1079,9 @@ export function BranchTemplatePage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => console.log('Dashboard clicked')}
+                onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
                 className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-sm font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-              >
-                Dashboard
-              </button>
+              >Discipleship</button>
               <button
                 type="button"
                 onClick={toggleDrawer}
@@ -862,37 +1110,44 @@ export function BranchTemplatePage() {
         </div>
       </div>
 
-      <section className="mx-auto my-10 flex w-[90%] max-w-[1100px] flex-col gap-5 lg:flex-row lg:items-start">
+      <section className="mx-auto my-10 flex w-[90%] max-w-[1100px] flex-col gap-5 lg:flex-row lg:items-stretch">
         <div className="flex w-full flex-col gap-5 lg:w-[380px]">
           <ServiceTimesPanel serviceTimes={serviceTimes} selected={selectedServiceType} onSelect={setSelectedServiceType} />
           <BranchInfoPanel branch={branch} branchAddress={branchAddress} />
-          <GivingPanel branch={branch} />
         </div>
-        <div className="w-full lg:flex-1">
+        <div className="flex w-full flex-col gap-5 lg:flex-1">
           <PastorSection pastorImage={pastorImg} pastorBio={pastorBio} />
+          <EventsPanel
+            branchName={branchName}
+            branchEvents={branchEvents}
+            displayEvents={displayEvents}
+            eventsFilter={eventsFilter}
+            setEventsFilter={setEventsFilter}
+          />
         </div>
       </section>
 
-      <section className="mx-auto my-8 grid w-[90%] max-w-[1100px] grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,420px)]">
-        <div className="rounded-[20px] border border-ff-secondary bg-white p-6 shadow-sm sm:p-8">
-          <h2 className="mb-2 text-2xl font-bold text-ff-secondary">Connect with {branchName}</h2>
-          <p className="mb-6 text-sm text-slate-600">
-            Leave a message, prayer request, or inquiry. Our pastoral team will get back to you promptly.
-          </p>
+      <section className="mx-auto my-8 grid w-[90%] max-w-[1100px] grid-cols-1 items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,420px)]">
+        <div className="flex h-full flex-col justify-between rounded-[20px] border border-ff-secondary bg-white p-5 shadow-sm sm:p-6 lg:min-h-[427px]">
+          <div>
+            <h2 className="mb-2 text-2xl font-bold text-ff-secondary">Connect with {branchName}</h2>
+            <p className="mb-4 text-sm text-slate-600">
+              Leave a message, prayer request, or inquiry for our pastoral team.
+            </p>
+          </div>
 
-          <form onSubmit={handleSubmitMessage} className="space-y-4">
-            <Input label="Your Full Name" required placeholder="e.g. John Doe" value={formName} onChange={setFormName} />
-            <Input label="Cell Number" required placeholder="e.g. 082 123 4567" value={formCell} onChange={setFormCell} />
+          <form onSubmit={handleSubmitMessage} className="flex flex-1 flex-col space-y-3">
+            <Input required placeholder="Your Full Name *" value={formName} onChange={setFormName} />
+            <Input required placeholder="Cell Number *" value={formCell} onChange={setFormCell} />
             <Input
-              label="Message"
               required
               multiline
-              rows={3}
-              placeholder="How can we support or pray with you?"
+              rows={2}
+              placeholder="How can we support or pray with you? *"
               value={formMessage}
               onChange={setFormMessage}
             />
-            <div className="flex justify-center pt-2">
+            <div className="mt-auto flex justify-center pt-2">
               <Button
                 type="submit"
                 text="Submit"
@@ -907,42 +1162,98 @@ export function BranchTemplatePage() {
           </form>
         </div>
 
-        <QuickActionButtons className="justify-center lg:py-5" />
+        <QuickActionButtons className="h-full justify-between lg:min-h-[427px]" itemClassName="lg:min-h-[67px]" />
       </section>
 
-      <section className="mx-auto my-8 w-[90%] max-w-[1100px]">
-        <h2 className="mb-5 text-center text-[25px] font-semibold text-ff-primary-text">{branchName} Resources</h2>
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <div className="h-[450px] overflow-y-auto rounded-[30px] border border-ff-secondary bg-ff-primary p-[15px]">
-            <h3 className="mb-4 text-center text-[18px] text-ff-primary-text">{branchName} Sermons</h3>
-            {sermonsLoading ? (
-              <p className="text-center text-ff-primary-text">Loading</p>
-            ) : branchSermons.length > 0 ? (
-              <div className="space-y-[10px]">
-                {branchSermons.map((sermon) => (
-                  <SermonCard key={sermon.id} sermon={sermon} />
-                ))}
+      {/* Dynamic Branch Resources Section: sermons and podcasts only */}
+      {(branchSermons.length > 0 || branchPodcasts.length > 0) && (
+        <section className="mx-auto my-8 w-[90%] max-w-[1100px] space-y-6">
+          <h2 className="text-center text-[25px] font-semibold text-ff-primary-text">{branchName} Resources</h2>
+          <div className="flex flex-wrap justify-center gap-6">
+            {branchSermons.length > 0 && (
+              <div className="h-[460px] w-full max-w-[537px] overflow-hidden rounded-[30px] border border-ff-secondary bg-ff-primary p-[15px] flex flex-col shadow-sm">
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <h3 className="text-[18px] font-bold text-ff-primary-text">{branchName} Sermons</h3>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-ff-secondary text-white">
+                    {branchSermons.length}
+                  </span>
+                </div>
+                <div className="space-y-[10px] overflow-y-auto flex-1 pr-1">
+                  {branchSermons.map((sermon) => (
+                    <SermonCard key={sermon.id} sermon={sermon} />
+                  ))}
+                </div>
               </div>
-            ) : (
-              <p className="text-center text-ff-primary-text">No sermons available for {branchName}.</p>
             )}
-          </div>
 
-          <div className="h-[450px] overflow-y-auto rounded-[30px] border border-ff-secondary bg-ff-primary p-[15px]">
-            <h3 className="mb-4 text-center text-[18px] text-ff-primary-text">{branchName} Events</h3>
-            {eventsLoading ? (
-              <p className="text-center text-ff-primary-text">Loading</p>
-            ) : branchEvents.length > 0 ? (
-              <div className="space-y-[10px]">
-                {branchEvents.map((event) => (
-                  <EventCard key={event.id} event={event} />
-                ))}
+            {branchPodcasts.length > 0 && (
+              <div className="h-[460px] w-full max-w-[537px] overflow-hidden rounded-[30px] border border-ff-secondary bg-ff-primary p-[15px] flex flex-col shadow-sm">
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <h3 className="text-[18px] font-bold text-ff-primary-text">{branchName} Podcasts</h3>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-ff-secondary text-white">
+                    {branchPodcasts.length}
+                  </span>
+                </div>
+                <div className="space-y-[10px] overflow-y-auto flex-1 pr-1">
+                  {branchPodcasts.map((podcast) => (
+                    <PodcastCard key={podcast.id} podcast={podcast} />
+                  ))}
+                </div>
               </div>
-            ) : (
-              <p className="text-center text-ff-primary-text">No events available for {branchName}.</p>
             )}
           </div>
-        </div>
+        </section>
+      )}
+
+      {branchMinistries.length > 0 && (
+        <section className="mx-auto my-8 w-[90%] max-w-[1100px] space-y-6">
+          <h2 className="text-center text-[25px] font-semibold text-ff-primary-text">{branchName} Ministries</h2>
+          <div className="mx-auto h-[460px] w-full overflow-hidden rounded-[30px] border border-ff-secondary bg-ff-primary p-[15px] flex flex-col shadow-sm">
+                <div className="mb-3 flex justify-center px-1">
+                  <div className="flex items-center gap-1 bg-white/80 p-1 rounded-full border border-ff-secondary/30 text-xs shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setMinistriesFilter('all')}
+                      className={`px-2.5 py-0.5 rounded-full font-bold transition ${
+                        ministriesFilter === 'all' ? 'bg-ff-secondary text-white' : 'text-slate-600 hover:text-black'
+                      }`}
+                    >
+                      All ({branchMinistries.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMinistriesFilter('global')}
+                      className={`px-2.5 py-0.5 rounded-full font-bold transition ${
+                        ministriesFilter === 'global' ? 'bg-ff-secondary text-white' : 'text-slate-600 hover:text-black'
+                      }`}
+                    >
+                      🌐 Global
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMinistriesFilter('branch')}
+                      className={`px-2.5 py-0.5 rounded-full font-bold transition ${
+                        ministriesFilter === 'branch' ? 'bg-ff-secondary text-white' : 'text-slate-600 hover:text-black'
+                      }`}
+                    >
+                      Campus
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-[10px] overflow-y-auto flex-1 pr-1">
+                  {displayMinistries.map((ministry) => (
+                    <MinistryCard key={ministry.id} ministry={ministry} isGlobal={isMinistryGlobal(ministry)} />
+                  ))}
+                  {displayMinistries.length === 0 && (
+                    <p className="text-center text-xs text-slate-500 py-6">No ministries match the selected filter.</p>
+                  )}
+                </div>
+          </div>
+        </section>
+      )}
+
+      <section className="mx-auto my-8 w-[90%] max-w-[1100px]">
+        <GivingPanel branch={branch} />
       </section>
 
       <Dialog

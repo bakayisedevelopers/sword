@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { GeoPoint, addDoc, collection, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { GeoPoint, addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
 import ChoiceDropdown from '../components/ui/ChoiceDropdown';
-import { firestore, storage } from '../lib/firebase';
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
+import { firestore } from '../lib/firebase';
 
 const branchAccessRoles = ['super_admin', 'global_editor', 'branch_editor'];
 const creatorRoles = ['super_admin', 'global_editor'];
+const branchWriteRoles = ['super_admin', 'global_editor'];
 const serviceTimeCategories = [
   { id: 'Adults', label: 'Adults' },
   { id: 'Youth', label: 'Youth' },
@@ -30,6 +31,7 @@ const emptyBranchDraft = {
   website: '',
   country: '',
   location: '',
+  locationLink: '',
   locationPinLat: '',
   locationPinLng: '',
   pastorUid: '',
@@ -61,29 +63,19 @@ const emptyContentDraft = {
   givingLink: '',
 };
 
-const emptyHeroAssets = {
-  desktopImageFile: null,
-  mobileImageFile: null,
-  videoFile: null,
-  desktopImagePreview: '',
-  mobileImagePreview: '',
-  videoPreview: '',
-  desktopImageInfo: null,
-  mobileImageInfo: null,
-  videoInfo: null,
-};
-
-function TextField({ label, value, onChange, placeholder, disabled = false }) {
+function TextField({ label, value, onChange, placeholder, disabled = false, type = 'text', helper = '' }) {
   return (
     <label className="block space-y-2">
       <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</span>
       <input
+        type={type}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
         className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-brand-gold/60 focus:bg-brand-gold/5 disabled:cursor-not-allowed disabled:opacity-60"
       />
+      {helper ? <span className="block text-xs leading-5 text-slate-500">{helper}</span> : null}
     </label>
   );
 }
@@ -230,112 +222,6 @@ function dimensionsLabel({ width, height }) {
   return `${width} × ${height}`;
 }
 
-async function inspectHeroUpload(kind, file) {
-  if (!file) {
-    return { error: '', info: null };
-  }
-
-  if (kind === 'desktopImage' || kind === 'mobileImage') {
-    if (!file.type.startsWith('image/')) {
-      return { error: 'Select an image file for the hero artwork.', info: null };
-    }
-
-    const dimensions = await readImageDimensions(file);
-    const expected = kind === 'desktopImage' ? heroImageRequirements.desktop : heroImageRequirements.mobile;
-    if (dimensions.width !== expected.width || dimensions.height !== expected.height) {
-      return {
-        error: `${kind === 'desktopImage' ? 'Desktop' : 'Mobile'} hero images must be exactly ${dimensionsLabel(expected)} pixels.`,
-        info: dimensions,
-      };
-    }
-
-    return { error: '', info: dimensions };
-  }
-
-  if (kind === 'video') {
-    if (!file.type.startsWith('video/')) {
-      return { error: 'Select a video file for the hero media.', info: null };
-    }
-
-    const dimensions = await readVideoDimensions(file);
-    if (dimensions.width < heroImageRequirements.video.minWidth || dimensions.height < heroImageRequirements.video.minHeight) {
-      return {
-        error: `Hero videos must be at least ${dimensionsLabel({ width: heroImageRequirements.video.minWidth, height: heroImageRequirements.video.minHeight })} pixels.`,
-        info: dimensions,
-      };
-    }
-
-    return { error: '', info: dimensions };
-  }
-
-  return { error: '', info: null };
-}
-
-function fileExtension(file) {
-  const name = `${file?.name || ''}`;
-  const match = name.match(/\.([a-z0-9]+)$/i);
-  return match ? `.${match[1].toLowerCase()}` : '';
-}
-
-function readImageDimensions(file) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    const url = URL.createObjectURL(file);
-
-    image.onload = () => {
-      const dimensions = { width: image.naturalWidth || image.width || 0, height: image.naturalHeight || image.height || 0 };
-      URL.revokeObjectURL(url);
-      resolve(dimensions);
-    };
-
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('The selected image could not be read.'));
-    };
-
-    image.src = url;
-  });
-}
-
-function readVideoDimensions(file) {
-  return new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    const url = URL.createObjectURL(file);
-
-    video.preload = 'metadata';
-    video.onloadedmetadata = () => {
-      const dimensions = { width: video.videoWidth || 0, height: video.videoHeight || 0 };
-      URL.revokeObjectURL(url);
-      resolve(dimensions);
-    };
-
-    video.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('The selected video could not be read.'));
-    };
-
-    video.src = url;
-  });
-}
-
-function uploadBranchAsset(branchId, kind, file) {
-  const extension = fileExtension(file) || '';
-  const path = `media/branches/${branchId}/landingPage/${kind}-${Date.now()}${extension}`;
-  const storageRef = ref(storage, path);
-
-  return uploadBytes(storageRef, file, {
-    contentType: file.type || undefined,
-    customMetadata: {
-      branchId,
-      kind,
-      originalName: file.name || '',
-    },
-  }).then((result) => getDownloadURL(result.ref).then((downloadURL) => ({
-    downloadURL,
-    path,
-  })));
-}
-
 function normalizeGeoPoint(value) {
   if (!value) {
     return { lat: '', lng: '' };
@@ -362,6 +248,16 @@ function normalizeGeoPoint(value) {
   return { lat: '', lng: '' };
 }
 
+function generatedMapUrl(lat, lng) {
+  if (!lat || !lng) return '';
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+}
+
+function openStreetMapUrl(lat, lng) {
+  if (!lat || !lng) return '';
+  return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(lat)}&mlon=${encodeURIComponent(lng)}#map=18/${encodeURIComponent(lat)}/${encodeURIComponent(lng)}`;
+}
+
 function buildEditorDraft(branchDoc) {
   const landingPage = branchDoc?.landingPage || {};
   const pin = normalizeGeoPoint(branchDoc?.locationPIN);
@@ -377,6 +273,7 @@ function buildEditorDraft(branchDoc) {
     website: branchDoc?.website || '',
     country: branchDoc?.country || '',
     location: branchDoc?.location || '',
+    locationLink: branchDoc?.locationLink || branchDoc?.location_link || '',
     locationPinLat: pin.lat,
     locationPinLng: pin.lng,
     pastorUid: pastorRef?.id || branchDoc?.pastorUid || '',
@@ -414,14 +311,13 @@ function buildBranchPayload(draft, selectedBranch) {
   const mobileHeroImage = draft.heroMobileImage.trim();
   const heroVideoUrl = draft.heroVideoUrl.trim();
 
-  return {
+  const payload = {
     name: draft.name.trim(),
     slug: slugifyBranch(draft.slug || draft.name),
     website: draft.website.trim(),
     country: draft.country.trim(),
     location: draft.location.trim(),
-    locationPIN: Number.isFinite(locationPinLat) && Number.isFinite(locationPinLng) ? new GeoPoint(locationPinLat, locationPinLng) : null,
-    pastor: pastorRef,
+    locationLink: draft.locationLink.trim(),
     email: draft.email.trim(),
     phone_number: draft.phone_number.trim(),
     bankingDetails: draft.bankingDetails.trim(),
@@ -459,6 +355,16 @@ function buildBranchPayload(draft, selectedBranch) {
     },
     updatedAt: serverTimestamp(),
   };
+
+  if (Number.isFinite(locationPinLat) && Number.isFinite(locationPinLng)) {
+    payload.locationPIN = new GeoPoint(locationPinLat, locationPinLng);
+  }
+
+  if (pastorRef) {
+    payload.pastor = pastorRef;
+  }
+
+  return payload;
 }
 
 function buildCreatePayload(draft) {
@@ -466,14 +372,13 @@ function buildCreatePayload(draft) {
   const locationPinLng = Number.parseFloat(draft.locationPinLng);
   const pastorRef = draft.pastorUid ? doc(firestore, 'users', draft.pastorUid) : null;
 
-  return {
+  const payload = {
     name: draft.name.trim(),
     slug: slugifyBranch(draft.slug || draft.name),
     website: draft.website.trim(),
     country: draft.country.trim(),
     location: draft.location.trim(),
-    locationPIN: Number.isFinite(locationPinLat) && Number.isFinite(locationPinLng) ? new GeoPoint(locationPinLat, locationPinLng) : null,
-    pastor: pastorRef,
+    locationLink: draft.locationLink.trim(),
     email: draft.email.trim(),
     phone_number: draft.phone_number.trim(),
     bankingDetails: draft.bankingDetails.trim(),
@@ -512,6 +417,16 @@ function buildCreatePayload(draft) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
+
+  if (Number.isFinite(locationPinLat) && Number.isFinite(locationPinLng)) {
+    payload.locationPIN = new GeoPoint(locationPinLat, locationPinLng);
+  }
+
+  if (pastorRef) {
+    payload.pastor = pastorRef;
+  }
+
+  return payload;
 }
 
 function RowButton({ onClick, children }) {
@@ -530,6 +445,7 @@ export default function BranchWorkspacePage() {
   const { roles, profile } = useAuth();
   const canAccessBranches = roles.some((role) => branchAccessRoles.includes(role));
   const canCreateBranch = roles.some((role) => creatorRoles.includes(role));
+  const canWriteBranches = roles.some((role) => branchWriteRoles.includes(role));
   const isBranchEditor = roles.includes('branch_editor') && !roles.includes('super_admin') && !roles.includes('global_editor');
   const branchScope = `${profile?.branch || ''}`.trim();
 
@@ -543,9 +459,12 @@ export default function BranchWorkspacePage() {
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [editorTab, setEditorTab] = useState('details');
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [geocodingBranch, setGeocodingBranch] = useState(false);
+  const [geocodingCreate, setGeocodingCreate] = useState(false);
   const [createDraft, setCreateDraft] = useState(emptyBranchDraft);
   const [draft, setDraft] = useState({ ...emptyBranchDraft, ...emptyContentDraft });
-  const [heroAssets, setHeroAssets] = useState({ ...emptyHeroAssets });
 
   useEffect(() => {
     let active = true;
@@ -672,9 +591,62 @@ export default function BranchWorkspacePage() {
     }));
   }
 
+  async function handleFindCoordinates(sourceDraft, targetSetter, setBusy) {
+    const address = `${sourceDraft.location || ''}`.trim();
+
+    if (!address) {
+      setError('Enter a branch address first.');
+      setMessage('');
+      return;
+    }
+
+    setBusy(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`);
+
+      if (!response.ok) {
+        throw new Error(`Nominatim returned ${response.status}`);
+      }
+
+      const results = await response.json();
+      const place = Array.isArray(results) ? results[0] : null;
+
+      if (!place?.lat || !place?.lon) {
+        setError('No map result was found for that address. Try adding the city and country.');
+        return;
+      }
+
+      const lat = Number.parseFloat(place.lat).toFixed(6);
+      const lng = Number.parseFloat(place.lon).toFixed(6);
+
+      targetSetter((current) => ({
+        ...current,
+        location: place.display_name || address,
+        locationPinLat: lat,
+        locationPinLng: lng,
+        locationLink: generatedMapUrl(lat, lng),
+      }));
+      setMessage('Coordinates found from the typed address. Review them before saving.');
+    } catch (err) {
+      console.error('Address geocoding failed:', err);
+      setError('The address could not be geocoded right now. Try again or enter coordinates manually.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleSaveBranch(event) {
     event.preventDefault();
     if (!selectedBranch) {
+      return;
+    }
+
+    if (!canWriteBranches) {
+      setError('Your account can view this branch, but only a Super Admin or Global Editor can save branch details with the current Firestore permissions.');
+      setMessage('');
       return;
     }
 
@@ -699,31 +671,16 @@ export default function BranchWorkspacePage() {
 
       if (nextDraft.heroMediaType === 'image') {
         nextDraft.heroVideoUrl = '';
-
-        if (heroAssets.desktopImageFile) {
-          const { downloadURL } = await uploadBranchAsset(selectedBranch.id, 'hero-desktop', heroAssets.desktopImageFile);
-          nextDraft.heroDesktopImage = downloadURL;
-        }
-
-        if (heroAssets.mobileImageFile) {
-          const { downloadURL } = await uploadBranchAsset(selectedBranch.id, 'hero-mobile', heroAssets.mobileImageFile);
-          nextDraft.heroMobileImage = downloadURL;
-        }
       } else {
         nextDraft.heroDesktopImage = '';
         nextDraft.heroMobileImage = '';
-
-        if (heroAssets.videoFile) {
-          const { downloadURL } = await uploadBranchAsset(selectedBranch.id, 'hero-video', heroAssets.videoFile);
-          nextDraft.heroVideoUrl = downloadURL;
-        }
       }
 
       await setDoc(doc(firestore, 'branches', selectedBranch.id), buildBranchPayload(nextDraft, selectedBranch), { merge: true });
       setDraft(nextDraft);
-      setHeroAssets({ ...emptyHeroAssets });
       setMessage(`Saved ${branchLabel(selectedBranch)}.`);
-    } catch {
+    } catch (err) {
+      console.error('Branch save failed:', err);
       setError('The branch could not be saved right now. Please try again.');
     } finally {
       setSavingBranch(false);
@@ -756,6 +713,25 @@ export default function BranchWorkspacePage() {
     }
   }
 
+  async function handleDeleteBranch() {
+    if (!selectedBranch?.id || !canCreateBranch) return;
+    setDeleting(true);
+    setError('');
+    setMessage('');
+    try {
+      await deleteDoc(doc(firestore, 'branches', selectedBranch.id));
+      const remainingBranches = branches.filter((b) => b.id !== selectedBranch.id);
+      setBranches(remainingBranches);
+      setSelectedBranchId(remainingBranches[0]?.id || '');
+      setMessage(`Deleted ${branchLabel(selectedBranch)}.`);
+      setDeleteOpen(false);
+    } catch {
+      setError('The branch could not be deleted right now. Check permissions.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const selectedBranchName = selectedBranch ? branchLabel(selectedBranch) : 'Select a branch';
   const selectedPastorValue = draft.pastorUid || '';
   const createPastorValue = createDraft.pastorUid || '';
@@ -784,36 +760,6 @@ export default function BranchWorkspacePage() {
     }));
   }
 
-  async function handleHeroAssetChange(kind, file) {
-    setError('');
-    setMessage('');
-
-    if (!file) {
-      setHeroAssets((current) => ({
-        ...current,
-        [kind === 'video' ? 'videoFile' : `${kind}File`]: null,
-        [kind === 'video' ? 'videoInfo' : `${kind}Info`]: null,
-      }));
-      return;
-    }
-
-    try {
-      const { error: fileError, info } = await inspectHeroUpload(kind, file);
-      if (fileError) {
-        setError(fileError);
-        return;
-      }
-
-      setHeroAssets((current) => ({
-        ...current,
-        [kind === 'video' ? 'videoFile' : `${kind}File`]: file,
-        [kind === 'video' ? 'videoInfo' : `${kind}Info`]: info,
-      }));
-    } catch {
-      setError('The selected file could not be read.');
-    }
-  }
-
   return (
     <main className="pb-6">
       <div className="mx-auto w-full max-w-6xl space-y-6">
@@ -840,9 +786,20 @@ export default function BranchWorkspacePage() {
         )}
 
         <section className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Branches</p>
-            <span className="text-sm text-slate-300">{selectedBranchName}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Branches</p>
+              <span className="text-sm font-semibold text-white">{selectedBranchName}</span>
+            </div>
+            {canCreateBranch && selectedBranch && (
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(true)}
+                className="rounded-full border border-red-500/30 px-3.5 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+              >
+                Delete branch
+              </button>
+            )}
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             {visibleBranches.map((branchDoc) => {
@@ -861,7 +818,7 @@ export default function BranchWorkspacePage() {
           </div>
         </section>
 
-        <section className="flex justify-center">
+        <section data-tour-id="branches-tabs" className="flex justify-center">
           <div className="inline-flex rounded-full border border-white/10 bg-slate-950/60 p-1">
             <button
               type="button"
@@ -881,7 +838,7 @@ export default function BranchWorkspacePage() {
         </section>
 
         {editorTab === 'details' ? (
-          <form onSubmit={handleSaveBranch} className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
+          <form data-tour-id="branches-details-form" onSubmit={handleSaveBranch} className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Branch details</p>
@@ -897,9 +854,50 @@ export default function BranchWorkspacePage() {
               <TextField label="URL slug" value={draft.slug} onChange={(event) => setDraft((current) => ({ ...current, slug: event.target.value }))} placeholder="emalahleni" />
               <TextField label="Website" value={draft.website} onChange={(event) => setDraft((current) => ({ ...current, website: event.target.value }))} placeholder="Branch website" />
               <TextField label="Country" value={draft.country} onChange={(event) => setDraft((current) => ({ ...current, country: event.target.value }))} placeholder="Country" />
-              <TextField label="Location pin lat" value={draft.locationPinLat} onChange={(event) => setDraft((current) => ({ ...current, locationPinLat: event.target.value }))} placeholder="Latitude" />
-              <TextField label="Location pin lng" value={draft.locationPinLng} onChange={(event) => setDraft((current) => ({ ...current, locationPinLng: event.target.value }))} placeholder="Longitude" />
-              <TextField label="Location" value={draft.location} onChange={(event) => setDraft((current) => ({ ...current, location: event.target.value }))} placeholder="Branch address" />
+              <div className="space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4 md:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Location and map</p>
+                    <p className="mt-1 text-xs text-slate-400">Type an address, find coordinates, then save the generated map URL.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleFindCoordinates(draft, setDraft, setGeocodingBranch)}
+                    disabled={geocodingBranch}
+                    className="rounded-full border border-brand-gold/60 px-4 py-2 text-xs font-bold text-brand-gold transition hover:bg-brand-gold hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {geocodingBranch ? 'Finding...' : 'Find coordinates'}
+                  </button>
+                </div>
+                <TextField label="Location" value={draft.location} onChange={(event) => setDraft((current) => ({ ...current, location: event.target.value }))} placeholder="Branch address" />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextField label="Location pin lat" value={draft.locationPinLat} onChange={(event) => setDraft((current) => ({ ...current, locationPinLat: event.target.value, locationLink: generatedMapUrl(event.target.value, current.locationPinLng) }))} placeholder="Latitude" />
+                  <TextField label="Location pin lng" value={draft.locationPinLng} onChange={(event) => setDraft((current) => ({ ...current, locationPinLng: event.target.value, locationLink: generatedMapUrl(current.locationPinLat, event.target.value) }))} placeholder="Longitude" />
+                </div>
+                <TextField label="Maps URL" value={draft.locationLink} onChange={(event) => setDraft((current) => ({ ...current, locationLink: event.target.value }))} placeholder="Generated Google Maps URL" />
+                <div className="flex flex-wrap gap-3">
+                  {draft.locationPinLat && draft.locationPinLng && (
+                    <a
+                      href={openStreetMapUrl(draft.locationPinLat, draft.locationPinLng)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-brand-gold hover:text-white"
+                    >
+                      Preview on map
+                    </a>
+                  )}
+                  {draft.locationLink && (
+                    <a
+                      href={draft.locationLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-brand-gold hover:text-white"
+                    >
+                      Open saved URL
+                    </a>
+                  )}
+                </div>
+              </div>
               <TextField label="Email" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} placeholder="Branch email" />
               <TextField label="Phone number" value={draft.phone_number} onChange={(event) => setDraft((current) => ({ ...current, phone_number: event.target.value }))} placeholder="Branch phone number" />
               <ChoiceDropdown
@@ -932,7 +930,7 @@ export default function BranchWorkspacePage() {
             </div>
           </form>
         ) : (
-          <section className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
+          <section data-tour-id="branches-content-form" className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Branch content</p>
@@ -960,82 +958,45 @@ export default function BranchWorkspacePage() {
             {draft.heroMediaType === 'video' ? (
               <div className="space-y-4 rounded-[1.6rem] border border-white/10 bg-slate-950/55 p-4">
                 <div>
-                  <p className="text-sm font-semibold text-white">Hero video upload</p>
+                  <p className="text-sm font-semibold text-white">Hero video URL</p>
                   <p className="mt-1 text-xs leading-6 text-slate-400">
-                    Upload a video file. Minimum recommended size is {dimensionsLabel(heroImageRequirements.video)}.
+                    Paste a direct video URL or a YouTube link. Recommended minimum video size is {dimensionsLabel(heroImageRequirements.video)}.
                   </p>
                 </div>
-                <label className="block space-y-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Upload hero video</span>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    onChange={(event) => handleHeroAssetChange('video', event.target.files?.[0] || null)}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-300 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-brand-gold file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-950 hover:border-brand-gold/60"
-                  />
-                </label>
-                <div className="rounded-[1.2rem] border border-white/10 bg-slate-950/70 p-3 text-xs leading-6 text-slate-400">
-                  {heroAssets.videoFile ? (
-                    <div className="space-y-1 text-slate-300">
-                      <p className="font-semibold text-white">{heroAssets.videoFile.name}</p>
-                      {heroAssets.videoInfo && (
-                        <p>
-                          Size: {dimensionsLabel(heroAssets.videoInfo)}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p>Current saved source: {draft.heroVideoUrl || 'none selected yet'}</p>
-                  )}
-                </div>
+                <TextField
+                  type="url"
+                  label="Hero video URL"
+                  value={draft.heroVideoUrl}
+                  onChange={(event) => setDraft((current) => ({ ...current, heroVideoUrl: event.target.value }))}
+                  placeholder="https://www.youtube.com/watch?v=... or https://.../hero.mp4"
+                  helper="Use a 16:9 video where possible. Direct video URLs and YouTube video links are supported on the branch page."
+                />
               </div>
             ) : (
               <div className="space-y-4 rounded-[1.6rem] border border-white/10 bg-slate-950/55 p-4">
                 <div>
-                  <p className="text-sm font-semibold text-white">Hero image uploads</p>
+                  <p className="text-sm font-semibold text-white">Hero image URLs</p>
                   <p className="mt-1 text-xs leading-6 text-slate-400">
-                    Desktop image must be exactly {dimensionsLabel(heroImageRequirements.desktop)}. Mobile image must be exactly {dimensionsLabel(heroImageRequirements.mobile)}.
+                    Paste hosted image URLs. Recommended desktop image size is {dimensionsLabel(heroImageRequirements.desktop)}. Recommended mobile image size is {dimensionsLabel(heroImageRequirements.mobile)}.
                   </p>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <label className="block space-y-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Upload desktop image</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) => handleHeroAssetChange('desktopImage', event.target.files?.[0] || null)}
-                      className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-300 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-brand-gold file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-950 hover:border-brand-gold/60"
-                    />
-                    <div className="rounded-[1.2rem] border border-white/10 bg-slate-950/70 p-3 text-xs leading-6 text-slate-400">
-                      {heroAssets.desktopImageFile ? (
-                        <div className="space-y-1 text-slate-300">
-                          <p className="font-semibold text-white">{heroAssets.desktopImageFile.name}</p>
-                          {heroAssets.desktopImageInfo && <p>Size: {dimensionsLabel(heroAssets.desktopImageInfo)}</p>}
-                        </div>
-                      ) : (
-                        <p>Current saved source: {draft.heroDesktopImage || 'none selected yet'}</p>
-                      )}
-                    </div>
-                  </label>
-                  <label className="block space-y-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Upload mobile image</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) => handleHeroAssetChange('mobileImage', event.target.files?.[0] || null)}
-                      className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-300 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-brand-gold file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-950 hover:border-brand-gold/60"
-                    />
-                    <div className="rounded-[1.2rem] border border-white/10 bg-slate-950/70 p-3 text-xs leading-6 text-slate-400">
-                      {heroAssets.mobileImageFile ? (
-                        <div className="space-y-1 text-slate-300">
-                          <p className="font-semibold text-white">{heroAssets.mobileImageFile.name}</p>
-                          {heroAssets.mobileImageInfo && <p>Size: {dimensionsLabel(heroAssets.mobileImageInfo)}</p>}
-                        </div>
-                      ) : (
-                        <p>Current saved source: {draft.heroMobileImage || 'none selected yet'}</p>
-                      )}
-                    </div>
-                  </label>
+                  <TextField
+                    type="url"
+                    label="Desktop image URL"
+                    value={draft.heroDesktopImage}
+                    onChange={(event) => setDraft((current) => ({ ...current, heroDesktopImage: event.target.value }))}
+                    placeholder="https://.../branch-desktop.jpg"
+                    helper={`Best fit: ${dimensionsLabel(heroImageRequirements.desktop)} desktop hero artwork.`}
+                  />
+                  <TextField
+                    type="url"
+                    label="Mobile image URL"
+                    value={draft.heroMobileImage}
+                    onChange={(event) => setDraft((current) => ({ ...current, heroMobileImage: event.target.value }))}
+                    placeholder="https://.../branch-mobile.jpg"
+                    helper={`Best fit: ${dimensionsLabel(heroImageRequirements.mobile)} mobile hero artwork.`}
+                  />
                 </div>
               </div>
             )}
@@ -1122,10 +1083,51 @@ export default function BranchWorkspacePage() {
             <TextField label="Name" value={createDraft.name} onChange={(event) => setCreateDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Branch name" />
             <TextField label="URL slug" value={createDraft.slug} onChange={(event) => setCreateDraft((current) => ({ ...current, slug: event.target.value }))} placeholder="Defaults from branch name" />
             <TextField label="Website" value={createDraft.website} onChange={(event) => setCreateDraft((current) => ({ ...current, website: event.target.value }))} placeholder="Branch website" />
-              <TextField label="Country" value={createDraft.country} onChange={(event) => setCreateDraft((current) => ({ ...current, country: event.target.value }))} placeholder="Country" />
-              <TextField label="Location pin lat" value={createDraft.locationPinLat} onChange={(event) => setCreateDraft((current) => ({ ...current, locationPinLat: event.target.value }))} placeholder="Latitude" />
-              <TextField label="Location pin lng" value={createDraft.locationPinLng} onChange={(event) => setCreateDraft((current) => ({ ...current, locationPinLng: event.target.value }))} placeholder="Longitude" />
+            <TextField label="Country" value={createDraft.country} onChange={(event) => setCreateDraft((current) => ({ ...current, country: event.target.value }))} placeholder="Country" />
+            <div className="space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4 md:col-span-2">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Location and map</p>
+                  <p className="mt-1 text-xs text-slate-400">Type an address, find coordinates, then save the generated map URL.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleFindCoordinates(createDraft, setCreateDraft, setGeocodingCreate)}
+                  disabled={geocodingCreate}
+                  className="rounded-full border border-brand-gold/60 px-4 py-2 text-xs font-bold text-brand-gold transition hover:bg-brand-gold hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {geocodingCreate ? 'Finding...' : 'Find coordinates'}
+                </button>
+              </div>
               <TextField label="Location" value={createDraft.location} onChange={(event) => setCreateDraft((current) => ({ ...current, location: event.target.value }))} placeholder="Branch address" />
+              <div className="grid gap-4 md:grid-cols-2">
+                <TextField label="Location pin lat" value={createDraft.locationPinLat} onChange={(event) => setCreateDraft((current) => ({ ...current, locationPinLat: event.target.value, locationLink: generatedMapUrl(event.target.value, current.locationPinLng) }))} placeholder="Latitude" />
+                <TextField label="Location pin lng" value={createDraft.locationPinLng} onChange={(event) => setCreateDraft((current) => ({ ...current, locationPinLng: event.target.value, locationLink: generatedMapUrl(current.locationPinLat, event.target.value) }))} placeholder="Longitude" />
+              </div>
+              <TextField label="Maps URL" value={createDraft.locationLink} onChange={(event) => setCreateDraft((current) => ({ ...current, locationLink: event.target.value }))} placeholder="Generated Google Maps URL" />
+              <div className="flex flex-wrap gap-3">
+                {createDraft.locationPinLat && createDraft.locationPinLng && (
+                  <a
+                    href={openStreetMapUrl(createDraft.locationPinLat, createDraft.locationPinLng)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-brand-gold hover:text-white"
+                  >
+                    Preview on map
+                  </a>
+                )}
+                {createDraft.locationLink && (
+                  <a
+                    href={createDraft.locationLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-brand-gold hover:text-white"
+                  >
+                    Open saved URL
+                  </a>
+                )}
+              </div>
+            </div>
             <TextField label="Email" value={createDraft.email} onChange={(event) => setCreateDraft((current) => ({ ...current, email: event.target.value }))} placeholder="Branch email" />
             <TextField label="Phone number" value={createDraft.phone_number} onChange={(event) => setCreateDraft((current) => ({ ...current, phone_number: event.target.value }))} placeholder="Branch phone number" />
             <ChoiceDropdown
@@ -1165,6 +1167,16 @@ export default function BranchWorkspacePage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDeleteModal
+        open={deleteOpen}
+        title="Delete branch"
+        itemName={selectedBranchName}
+        message="Are you sure you want to delete this church branch campus? This action is permanent and will remove branch content, location settings, and media bindings."
+        loading={deleting}
+        onConfirm={handleDeleteBranch}
+        onClose={() => setDeleteOpen(false)}
+      />
     </main>
   );
 }

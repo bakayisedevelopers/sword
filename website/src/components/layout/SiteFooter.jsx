@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { FollowUpModal } from '../modals/FollowUpModal.jsx';
+import { useFirestoreQuery } from '../../hooks/useFirestoreQuery.js';
+import { COLLECTIONS } from '../../lib/firestore.js';
+
+function getMinistryPath(ministry) {
+  if (ministry.slug) return `/${ministry.slug}`;
+  const name = ministry.name || ministry.ministryName || '';
+  const slug = name.toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return slug ? `/${slug}` : `/ministry?id=${ministry.id}`;
+}
 
 /**
  * SiteFooter component reproducing FooterWidget, FooterDesktopWidget, and FooterMobileWidget:
@@ -10,6 +19,29 @@ import { FollowUpModal } from '../modals/FollowUpModal.jsx';
  */
 export function SiteFooter() {
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const { data: dbMinistries } = useFirestoreQuery(COLLECTIONS.MINISTRIES);
+  const currentYear = new Date().getFullYear();
+
+  const conferencesList = useMemo(() => {
+    const defaultConfs = [
+      { name: 'Fire Conference', path: '/fire-conference' },
+      { name: 'Superman Conference', path: '/superman-conference' },
+      { name: 'Camp Yolo', path: '/camp-yolo' },
+    ];
+    if (!dbMinistries || !dbMinistries.length) return defaultConfs;
+
+    const dbConfs = dbMinistries
+      .filter((m) => m.type === 'conference')
+      .map((m) => ({ name: m.name || m.ministryName, path: getMinistryPath(m) }));
+
+    const merged = [...dbConfs];
+    for (const def of defaultConfs) {
+      if (!merged.some((m) => m.name.toLowerCase() === def.name.toLowerCase())) {
+        merged.push(def);
+      }
+    }
+    return merged;
+  }, [dbMinistries]);
 
   const handleLinkClick = () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -27,13 +59,11 @@ export function SiteFooter() {
               <button
                 type="button"
                 onClick={() => {
-                  console.log('My Dashboard clicked');
+                  window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer');
                   handleLinkClick();
                 }}
                 className="w-[150px] h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-sm border border-ff-secondary hover:bg-white/90 transition-colors shadow-sm"
-              >
-                My Dashboard
-              </button>
+              >Discipleship</button>
 
               <div className="flex flex-col gap-2 pt-2">
                 <Link to="/locations" onClick={handleLinkClick} className="text-xl font-bold text-white hover:text-white/80 transition-colors">
@@ -90,7 +120,7 @@ export function SiteFooter() {
                 <Link to="/youth" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Youth
                 </Link>
-                <Link to="/couples" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
+                <Link to="/for-couples" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Couples
                 </Link>
                 <Link to="/for-men" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
@@ -142,9 +172,6 @@ export function SiteFooter() {
                 <Link to="/podcasts" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
                   Podcasts
                 </Link>
-                <Link to="/events" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
-                  Events
-                </Link>
               </div>
             </div>
 
@@ -159,15 +186,16 @@ export function SiteFooter() {
                 <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
                   Conferences
                 </span>
-                <Link to="/fire-conference" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
-                  Fire Conference
-                </Link>
-                <Link to="/superman-conference" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
-                  Superman Conference
-                </Link>
-                <Link to="/camp-yolo" onClick={handleLinkClick} className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1">
-                  Camp Yolo
-                </Link>
+                {conferencesList.map((conf) => (
+                  <Link
+                    key={conf.name}
+                    to={conf.path}
+                    onClick={handleLinkClick}
+                    className="text-lg font-bold text-white hover:text-white/80 transition-colors pl-1"
+                  >
+                    {conf.name}
+                  </Link>
+                ))}
               </div>
 
               {/* Others Sub-section */}
@@ -195,7 +223,7 @@ export function SiteFooter() {
               Social Links
             </Link>
             <p className="text-sm font-semibold text-white/90">
-              &copy; 2025 Sword & Spirit. All rights reserved.
+              &copy; {currentYear} Sword & Spirit. All rights reserved.
             </p>
           </div>
         </div>
@@ -208,13 +236,11 @@ export function SiteFooter() {
               <button
                 type="button"
                 onClick={() => {
-                  console.log('My Dashboard clicked');
+                  window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer');
                   handleLinkClick();
                 }}
                 className="w-[140px] h-9 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text font-bold text-xs border border-ff-secondary hover:bg-white/90 transition-colors shadow-sm mb-1"
-              >
-                My Dashboard
-              </button>
+              >Discipleship</button>
 
               <div className="flex flex-col gap-2 pt-1">
                 <Link to="/locations" onClick={handleLinkClick} className="text-base font-bold text-white hover:text-white/80 transition-colors">
@@ -271,7 +297,7 @@ export function SiteFooter() {
                 <Link to="/youth" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
                   Youth
                 </Link>
-                <Link to="/couples" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
+                <Link to="/for-couples" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
                   Couples
                 </Link>
                 <Link to="/for-men" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
@@ -323,9 +349,6 @@ export function SiteFooter() {
                 <Link to="/podcasts" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
                   Podcasts
                 </Link>
-                <Link to="/events" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
-                  Events
-                </Link>
               </div>
             </div>
 
@@ -340,15 +363,16 @@ export function SiteFooter() {
                 <span className="bg-white text-ff-secondary font-bold text-xs px-3.5 py-1 rounded-r-xl shadow-sm inline-block">
                   Conferences
                 </span>
-                <Link to="/fire-conference" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
-                  Fire Conference
-                </Link>
-                <Link to="/superman-conference" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
-                  Superman Conference
-                </Link>
-                <Link to="/camp-yolo" onClick={handleLinkClick} className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1">
-                  Camp Yolo
-                </Link>
+                {conferencesList.map((conf) => (
+                  <Link
+                    key={conf.name}
+                    to={conf.path}
+                    onClick={handleLinkClick}
+                    className="text-sm font-bold text-white/90 hover:text-white transition-colors pl-1"
+                  >
+                    {conf.name}
+                  </Link>
+                ))}
               </div>
 
               {/* Others Sub-section */}
@@ -376,7 +400,7 @@ export function SiteFooter() {
               Social Links
             </Link>
             <p className="text-xs font-semibold text-white/90 text-center">
-              &copy; 2025 Sword & Spirit. All rights reserved.
+              &copy; {currentYear} Sword & Spirit. All rights reserved.
             </p>
           </div>
         </div>

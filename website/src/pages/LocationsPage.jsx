@@ -1,12 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppState } from '../app/providers.jsx';
 import { useFirestoreQuery } from '../hooks/useFirestoreQuery.js';
 import { COLLECTIONS } from '../lib/firestore.js';
-import { BranchCard } from '../features/branches/BranchCard.jsx';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner.jsx';
 import { SiteFooter } from '../components/layout/SiteFooter.jsx';
 import { MobileDrawer } from '../components/layout/MobileDrawer.jsx';
+import { formatBranchSlug } from '../lib/format.js';
+import { launchUrl } from '../lib/urls.js';
+import { ChevronRight } from '../components/common/Icons.jsx';
 
 /**
  * LocationsPage migrating LocationsWidget:
@@ -22,8 +24,6 @@ import { MobileDrawer } from '../components/layout/MobileDrawer.jsx';
  */
 export function LocationsPage() {
   const { toggleDrawer } = useAppState();
-  const branchesGridRef = useRef(null);
-  const [branchColumns, setBranchColumns] = useState(1);
 
   useEffect(() => {
     document.title = 'Our Locations | Sword of the Spirit Ministries';
@@ -37,19 +37,6 @@ export function LocationsPage() {
   const branches = [...(rawBranches || [])].sort((a, b) =>
     (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase())
   );
-
-  useEffect(() => {
-    if (!branchesGridRef.current) return undefined;
-
-    const updateColumns = ([entry]) => {
-      const width = entry.contentRect.width;
-      setBranchColumns(width >= 1020 ? 3 : width >= 680 ? 2 : 1);
-    };
-
-    const observer = new ResizeObserver(updateColumns);
-    observer.observe(branchesGridRef.current);
-    return () => observer.disconnect();
-  }, []);
 
   const navItems = [
     { name: 'Locations', path: '/locations' },
@@ -112,11 +99,9 @@ export function LocationsPage() {
             <div>
               <button
                 type="button"
-                onClick={() => console.log('My Dashboard clicked')}
+                onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
                 className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-              >
-                My Dashboard
-              </button>
+              >Discipleship</button>
             </div>
           </div>
         </div>
@@ -158,11 +143,9 @@ export function LocationsPage() {
               ))}
               <button
                 type="button"
-                onClick={() => console.log('My Dashboard clicked')}
+                onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
                 className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-primary transition-colors"
-              >
-                My Dashboard
-              </button>
+              >Discipleship</button>
             </nav>
           </div>
         </div>
@@ -187,11 +170,9 @@ export function LocationsPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => console.log('Dashboard clicked')}
+                onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
                 className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-sm font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-              >
-                Dashboard
-              </button>
+              >Discipleship</button>
               <button
                 type="button"
                 onClick={toggleDrawer}
@@ -227,40 +208,85 @@ export function LocationsPage() {
         </div>
       </section>
 
-      {/* 3. DYNAMIC BRANCHES GRID SECTION */}
+      {/* 3. DYNAMIC BRANCHES LIST SECTION */}
       {/* Flutter lines 70-137: _dynamicBranchesSection */}
       <section className="w-full py-[20px]">
-        <div ref={branchesGridRef} className="w-[90%] mx-auto rounded-[30px] bg-white">
+        <div className="w-[90%] max-w-[900px] mx-auto rounded-[24px] bg-white border border-slate-200 overflow-hidden shadow-sm">
           {/* Loading State */}
           {loading && (
             <div className="p-[40px] flex items-center justify-center">
-              <LoadingSpinner size={40} color="#FFFFFF" />
+              <LoadingSpinner size={40} color="#192431" />
             </div>
           )}
 
           {/* Error State */}
           {!loading && error && (
-            <div className="p-8 text-center text-white/80 font-medium">
+            <div className="p-8 text-center text-slate-600 font-medium">
               <p>Branches could not be loaded right now.</p>
             </div>
           )}
 
           {/* Empty State */}
           {!loading && !error && branches.length === 0 && (
-            <div className="p-8 text-center text-white/80 font-medium">
+            <div className="p-8 text-center text-slate-600 font-medium">
               <p>No branches are available yet.</p>
             </div>
           )}
 
-          {/* Branch Grid: 3 cols at >= 1020px, 2 cols at >= 680px, 1 col otherwise */}
           {!loading && !error && branches.length > 0 && (
-            <div
-              className="grid gap-5"
-              style={{ gridTemplateColumns: `repeat(${branchColumns}, minmax(0, 1fr))` }}
-            >
-              {branches.map((branch) => (
-                <BranchCard key={branch.id || branch.name} branch={branch} />
-              ))}
+            <div className="divide-y divide-slate-200">
+              {branches.map((branch) => {
+                const slug = formatBranchSlug(branch);
+                const isOnline = (branch.name || '').trim().toLowerCase() === 'online';
+                const hasDirections =
+                  !isOnline && (Boolean(branch.locationPIN) || Boolean(branch.location && branch.location.trim()));
+
+                const openDirections = (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  const pin = branch.locationPIN;
+                  if (pin && (pin.latitude != null || pin._latitude != null)) {
+                    const lat = pin.latitude ?? pin._latitude;
+                    const lng = pin.longitude ?? pin._longitude;
+                    launchUrl(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`);
+                    return;
+                  }
+                  if (branch.location && branch.location.trim()) {
+                    launchUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(branch.location.trim())}`);
+                  }
+                };
+
+                return (
+                  <Link
+                    key={branch.id || branch.name}
+                    to={slug ? `/${slug}` : '/locations'}
+                    className="flex items-center justify-between gap-4 bg-white px-5 py-4 text-left transition-colors hover:bg-slate-50"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-lg font-bold text-ff-secondary">
+                        {branch.name || 'Branch'}
+                      </span>
+                      {(branch.country || branch.location) && (
+                        <span className="mt-0.5 block truncate text-sm text-slate-500">
+                          {[branch.country, branch.location].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      {hasDirections && (
+                        <button
+                          type="button"
+                          onClick={openDirections}
+                          className="hidden rounded-full border border-ff-secondary px-4 py-2 text-xs font-bold text-ff-secondary transition-colors hover:bg-ff-secondary hover:text-white sm:inline-flex"
+                        >
+                          Directions
+                        </button>
+                      )}
+                      <ChevronRight className="h-5 w-5 text-ff-secondary" strokeWidth={2.5} />
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>

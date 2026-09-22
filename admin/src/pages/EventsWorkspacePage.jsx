@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
+import { GeoPoint, addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
 import { firestore } from '../lib/firebase';
 
@@ -21,6 +21,8 @@ const emptyDraft = {
   branchId: '',
   location: '',
   location_link: '',
+  locationPinLat: '',
+  locationPinLng: '',
   price: '',
   recurring: false,
   day: '',
@@ -41,6 +43,7 @@ const emptyDraft = {
   sessionEnd: '',
   recurrenceEnd: '',
   recurrenceDays: [],
+  ticketLimit: '',
 };
 
 function branchLabel(branchDoc) {
@@ -189,6 +192,42 @@ function dateTimeOrNull(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function normalizeGeoPoint(value) {
+  if (!value) {
+    return { lat: '', lng: '' };
+  }
+
+  if (value instanceof GeoPoint) {
+    return {
+      lat: value.latitude?.toString?.() || '',
+      lng: value.longitude?.toString?.() || '',
+    };
+  }
+
+  if (typeof value === 'object') {
+    const lat = value.latitude ?? value._latitude ?? '';
+    const lng = value.longitude ?? value._longitude ?? '';
+    if (lat !== '' || lng !== '') {
+      return {
+        lat: `${lat}`,
+        lng: `${lng}`,
+      };
+    }
+  }
+
+  return { lat: '', lng: '' };
+}
+
+function generatedMapUrl(lat, lng) {
+  if (!lat || !lng) return '';
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+}
+
+function openStreetMapUrl(lat, lng) {
+  if (!lat || !lng) return '';
+  return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(lat)}&mlon=${encodeURIComponent(lng)}#map=18/${encodeURIComponent(lat)}/${encodeURIComponent(lng)}`;
+}
+
 function toDateInputValue(date) {
   if (!date) return '';
   const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -254,31 +293,44 @@ function buildOccurrenceDates(draft) {
 }
 
 function buildCreatePayload(draft, user, branches, users, ministries) {
-  const branchDoc = branches.find((branch) => branch.id === draft.branchId);
+  const isGlobal = Boolean(
+    draft.global ||
+    draft.branchId === 'global' ||
+    draft.branch_name?.trim().toLowerCase() === 'global' ||
+    (Array.isArray(draft.branches) && draft.branches.some((b) => `${b}`.trim().toLowerCase() === 'global'))
+  );
+  const branchDoc = isGlobal ? null : branches.find((branch) => branch.id === draft.branchId);
   const ministryDoc = ministries.find((ministry) => ministry.id === draft.ministryId);
   const contactDoc = users.find((profile) => profile.id === draft.contactPersonId);
   const date = dateTimeOrNull(draft.date);
   const time = dateTimeOrNull(draft.time);
+  const locationPinLat = Number.parseFloat(draft.locationPinLat);
+  const locationPinLng = Number.parseFloat(draft.locationPinLng);
   const ministryNameValue = draft.mininstryName.trim() || ministryDoc?.name || ministryDoc?.ministryName || '';
+
+  const branchesList = isGlobal
+    ? Array.from(new Set(['Global', ...(draft.branches || [])]))
+    : (draft.branches || []);
 
   const payload = {
     title: draft.title.trim(),
     description: draft.description.trim(),
     booking: draft.booking,
     picture: draft.picture.trim(),
-    global: draft.global,
+    global: isGlobal,
     location: draft.location.trim(),
     location_link: draft.location_link.trim(),
     price: Number.parseFloat(draft.price || '0') || 0,
+    ticketLimit: Number.parseInt(draft.ticketLimit || '0', 10) || 0,
     recurring: draft.recurring,
     day: draft.day,
-    branch_name: draft.branch_name.trim(),
+    branch_name: isGlobal ? 'Global' : draft.branch_name.trim(),
     repeat: draft.repeat,
     date_details: draft.date_details.trim(),
     time_details: draft.time_details.trim(),
     mininstryName: ministryNameValue,
     ministryName: ministryNameValue,
-    branches: draft.branches,
+    branches: branchesList,
     checkInEnabled: draft.checkInEnabled,
     checkOutEnabled: draft.checkOutEnabled,
     multiSession: draft.multiSession,
@@ -293,6 +345,9 @@ function buildCreatePayload(draft, user, branches, users, ministries) {
 
   if (date) payload.date = date;
   if (time) payload.time = time;
+  if (Number.isFinite(locationPinLat) && Number.isFinite(locationPinLng)) {
+    payload.locationPIN = new GeoPoint(locationPinLat, locationPinLng);
+  }
   if (branchDoc?.ref) payload.branch = branchDoc.ref;
   if (ministryDoc?.ref) payload.ministry = ministryDoc.ref;
   if (contactDoc?.ref) payload.contactPerson = contactDoc.ref;
@@ -319,6 +374,7 @@ export default function EventsWorkspacePage() {
   const [users, setUsers] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [activeTab, setActiveTab] = useState('events');
+  const [geocodingEvent, setGeocodingEvent] = useState(false);
   const [draft, setDraft] = useState({ ...emptyDraft });
 
   useEffect(() => {
@@ -439,6 +495,53 @@ export default function EventsWorkspacePage() {
         ? current.branches.filter((branch) => branch !== value)
         : [...current.branches, value],
     }));
+  }
+
+  async function handleFindCoordinates() {
+    const address = `${draft.location || ''}`.trim();
+
+    if (!address) {
+      setError('Enter the event address first.');
+      setMessage('');
+      return;
+    }
+
+    setGeocodingEvent(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`);
+
+      if (!response.ok) {
+        throw new Error(`Nominatim returned ${response.status}`);
+      }
+
+      const results = await response.json();
+      const place = Array.isArray(results) ? results[0] : null;
+
+      if (!place?.lat || !place?.lon) {
+        setError('No map result was found for that event address. Try adding the city and country.');
+        return;
+      }
+
+      const lat = Number.parseFloat(place.lat).toFixed(6);
+      const lng = Number.parseFloat(place.lon).toFixed(6);
+
+      setDraft((current) => ({
+        ...current,
+        location: place.display_name || address,
+        locationPinLat: lat,
+        locationPinLng: lng,
+        location_link: generatedMapUrl(lat, lng),
+      }));
+      setMessage('Coordinates found from the event address. Review them before saving.');
+    } catch (err) {
+      console.error('Event address geocoding failed:', err);
+      setError('The event address could not be geocoded right now. Try again or enter coordinates manually.');
+    } finally {
+      setGeocodingEvent(false);
+    }
   }
 
   async function handleCreateEvent(event) {
@@ -570,7 +673,7 @@ export default function EventsWorkspacePage() {
           </div>
         </section>
 
-        <section className="flex justify-center">
+        <section data-tour-id="events-tabs" className="flex justify-center">
           <div className="inline-flex rounded-full border border-white/10 bg-slate-950/60 p-1">
             <button type="button" onClick={() => setActiveTab('events')} className={`rounded-full px-4 py-2 text-sm font-semibold transition ${activeTab === 'events' ? 'bg-brand-gold text-slate-950' : 'text-slate-300 hover:text-white'}`}>Events</button>
             <button type="button" onClick={() => setActiveTab('create')} className={`rounded-full px-4 py-2 text-sm font-semibold transition ${activeTab === 'create' ? 'bg-brand-gold text-slate-950' : 'text-slate-300 hover:text-white'}`}>Create event</button>
@@ -595,7 +698,7 @@ export default function EventsWorkspacePage() {
             </div>
           </section>
         ) : (
-          <form onSubmit={handleCreateEvent} className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
+          <form data-tour-id="events-create-form" onSubmit={handleCreateEvent} className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Create event</p>
@@ -611,9 +714,52 @@ export default function EventsWorkspacePage() {
               <TextField label="Event time" type="datetime-local" value={draft.time} onChange={(event) => setDraft((current) => ({ ...current, time: event.target.value }))} />
               <TextField label="Date details" value={draft.date_details} onChange={(event) => setDraft((current) => ({ ...current, date_details: event.target.value }))} placeholder="e.g. Every Sunday / 14-16 June" />
               <TextField label="Time details" value={draft.time_details} onChange={(event) => setDraft((current) => ({ ...current, time_details: event.target.value }))} placeholder="e.g. 09:00 AM / Doors open 18:00" />
-              <TextField label="Location" value={draft.location} onChange={(event) => setDraft((current) => ({ ...current, location: event.target.value }))} placeholder="Venue or address" />
-              <TextField label="Location link" value={draft.location_link} onChange={(event) => setDraft((current) => ({ ...current, location_link: event.target.value }))} placeholder="Google Maps or external link" />
+              <div className="space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4 md:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Event location and map</p>
+                    <p className="mt-1 text-xs text-slate-400">Type the venue address, find coordinates, then save the generated map URL.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleFindCoordinates}
+                    disabled={geocodingEvent}
+                    className="rounded-full border border-brand-gold/60 px-4 py-2 text-xs font-bold text-brand-gold transition hover:bg-brand-gold hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {geocodingEvent ? 'Finding...' : 'Find coordinates'}
+                  </button>
+                </div>
+                <TextField label="Location" value={draft.location} onChange={(event) => setDraft((current) => ({ ...current, location: event.target.value }))} placeholder="Venue or address" />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextField label="Location pin lat" value={draft.locationPinLat} onChange={(event) => setDraft((current) => ({ ...current, locationPinLat: event.target.value, location_link: generatedMapUrl(event.target.value, current.locationPinLng) }))} placeholder="Latitude" />
+                  <TextField label="Location pin lng" value={draft.locationPinLng} onChange={(event) => setDraft((current) => ({ ...current, locationPinLng: event.target.value, location_link: generatedMapUrl(current.locationPinLat, event.target.value) }))} placeholder="Longitude" />
+                </div>
+                <TextField label="Location link" value={draft.location_link} onChange={(event) => setDraft((current) => ({ ...current, location_link: event.target.value }))} placeholder="Generated Google Maps URL" />
+                <div className="flex flex-wrap gap-3">
+                  {draft.locationPinLat && draft.locationPinLng && (
+                    <a
+                      href={openStreetMapUrl(draft.locationPinLat, draft.locationPinLng)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-brand-gold hover:text-white"
+                    >
+                      Preview on map
+                    </a>
+                  )}
+                  {draft.location_link && (
+                    <a
+                      href={draft.location_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-brand-gold hover:text-white"
+                    >
+                      Open saved URL
+                    </a>
+                  )}
+                </div>
+              </div>
               <TextField label="Price" type="number" value={draft.price} onChange={(event) => setDraft((current) => ({ ...current, price: event.target.value }))} placeholder="0" />
+              <TextField label="Seat capacity / Ticket limit" type="number" value={draft.ticketLimit} onChange={(event) => setDraft((current) => ({ ...current, ticketLimit: event.target.value }))} placeholder="0 = unlimited" />
               <label className="block space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Day</span>
                 <select value={draft.day} onChange={(event) => setDraft((current) => ({ ...current, day: event.target.value }))} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-brand-gold/60 focus:bg-brand-gold/5">
@@ -630,7 +776,7 @@ export default function EventsWorkspacePage() {
 
             <TextAreaField label="Description" value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Public event description" rows={4} />
 
-              <section className="rounded-[1.6rem] border border-white/10 bg-slate-950/60 p-4">
+              <section data-tour-id="events-registration-settings" className="rounded-[1.6rem] border border-white/10 bg-slate-950/60 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Visibility and registrations</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <TogglePill active={draft.booking} onClick={() => setDraft((current) => ({ ...current, booking: !current.booking }))}>Enable registration</TogglePill>
@@ -726,17 +872,30 @@ export default function EventsWorkspacePage() {
                   value={draft.branchId}
                   disabled={!canManageAll}
                   onChange={(event) => {
-                    const branchDoc = branches.find((branch) => branch.id === event.target.value);
+                    const selectedVal = event.target.value;
+                    if (selectedVal === 'global') {
+                      setDraft((current) => ({
+                        ...current,
+                        branchId: 'global',
+                        branch_name: 'Global',
+                        global: true,
+                        branches: Array.from(new Set(['Global', ...current.branches])),
+                      }));
+                      return;
+                    }
+                    const branchDoc = branches.find((branch) => branch.id === selectedVal);
                     setDraft((current) => ({
                       ...current,
-                      branchId: event.target.value,
+                      branchId: selectedVal,
                       branch_name: branchDoc ? branchLabel(branchDoc) : '',
+                      global: false,
                       branches: current.branches.length ? current.branches : branchDoc ? [branchLabel(branchDoc)] : [],
                     }));
                   }}
                   className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-brand-gold/60 focus:bg-brand-gold/5 disabled:opacity-70"
                 >
                   <option value="">Select branch</option>
+                  <option value="global">🌐 Global (All Branches)</option>
                   {branches.map((branchDoc) => <option key={branchDoc.id} value={branchDoc.id}>{branchLabel(branchDoc)}</option>)}
                 </select>
               </label>
@@ -764,6 +923,23 @@ export default function EventsWorkspacePage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Registration branches</p>
               <p className="mt-2 text-sm leading-6 text-slate-400">The public registration page uses this list for the branch dropdown.</p>
               <div className="mt-3 flex flex-wrap gap-2">
+                <TogglePill
+                  active={draft.global || draft.branches.includes('Global')}
+                  onClick={() => {
+                    const nextGlobal = !(draft.global || draft.branches.includes('Global'));
+                    setDraft((current) => ({
+                      ...current,
+                      global: nextGlobal,
+                      branchId: nextGlobal ? 'global' : (current.branchId === 'global' ? '' : current.branchId),
+                      branch_name: nextGlobal ? 'Global' : (current.branch_name === 'Global' ? '' : current.branch_name),
+                      branches: nextGlobal
+                        ? Array.from(new Set(['Global', ...current.branches]))
+                        : current.branches.filter((b) => b !== 'Global'),
+                    }));
+                  }}
+                >
+                  🌐 Global (All Branches)
+                </TogglePill>
                 {branches.map((branchDoc) => {
                   const label = branchLabel(branchDoc);
                   const disabled = !canManageAll && label !== selectedBranchName;

@@ -1,21 +1,45 @@
 # SSMI Admin
 
-This folder is the Vite + React admin app for the church site.
+The `admin/` app is the React + Vite + Tailwind administration workspace for Sword & Spirit Ministries.
 
-## What it contains
+It manages the Firestore records that power the public website and internal operational workflows.
 
-- `src/app/adminBlueprint.js`: the shared admin-facing view of the church content model.
-- `src/routes/adminRoutes.js`: the dashboard and section route registry.
-- `src/components/layout`: the admin header and sidebar.
-- `src/pages`: the dashboard, section editor, and 404 page.
+## Main Responsibilities
 
-## Purpose
+- Branch details, branch landing-page content, service times, giving details, and location/map data.
+- Website homepage content such as latest sermon, year theme, and album release links.
+- Events, event locations, ticket limits, registrations, and attendance/check-in records.
+- Ministries, ministry details, and ministry sign-ups.
+- Requests from public forms such as contact, prayer, counselling, baptism, and follow-up.
+- Partners and partner follow-up records.
+- Sermons/media records.
+- User access, roles, branch scope, profile details, and notifications.
+- Help documentation and first-time section tours.
 
-The FlutterFlow build has a lot of content that needs a proper editing surface. This admin app
-is the place to manage pages, branches, ministries, events, and shared settings separately from
-the public website.
+## Commands
 
-## Validation
+```bash
+npm install
+npm run dev
+npm run build
+```
 
-- `npm run build` passes for the current scaffold.
-- The section list is driven by the same shared blueprint as the public website.
+Deploy only admin from the repository root:
+
+```bash
+npx firebase-tools deploy --only hosting:admin
+```
+
+## Important Files
+
+- `src/App.jsx` - Admin shell and route registration.
+- `src/auth/` - Firebase Auth, role parsing, route protection.
+- `src/components/layout/` - Header, sidebar, notification UI.
+- `src/help/helpContent.js` - Help topics and tour definitions.
+- `src/pages/HelpPage.jsx` - Admin guide with live embedded section previews.
+- `src/pages/BranchWorkspacePage.jsx` - Branch profile/content editor.
+- `src/pages/WebsiteContentPage.jsx` - Homepage-level website content editor.
+- `src/tour/` - Frontend guided-tour implementation.
+- `src/services/` - Frontend service helpers.
+
+Additional developer notes: `docs/DEVELOPER_GUIDE.md`.

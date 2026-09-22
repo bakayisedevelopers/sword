@@ -4,6 +4,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
 import { firestore } from '../lib/firebase';
 import { highestRole, roleLabel } from '../auth/roles';
+import { useTour } from '../tour/TourProvider';
 
 function isRawId(value) {
   if (!value) return true;
@@ -102,6 +103,7 @@ function QuickLink({ to, children }) {
 
 export default function DashboardPage() {
   const { user, profile, roles } = useAuth();
+  const { completedCount, totalTours, startTour } = useTour();
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({
     branches: 0,
@@ -242,7 +244,7 @@ export default function DashboardPage() {
 
   return (
     <main className="space-y-5 pb-8 sm:space-y-6 w-full min-w-0 overflow-x-hidden">
-      <section className="relative overflow-hidden rounded-[2rem] border border-brand-gold/20 bg-[#111805] p-5 shadow-soft sm:p-8 w-full min-w-0">
+      <section data-tour-id="dashboard-hero" className="relative overflow-hidden rounded-[2rem] border border-brand-gold/20 bg-[#111805] p-5 shadow-soft sm:p-8 w-full min-w-0">
         <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(rgba(222,255,75,0.45)_1px,transparent_1px)] [background-size:18px_18px]" />
         <div className="relative grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end min-w-0">
           <div className="min-w-0 break-words">
@@ -255,19 +257,25 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-white/10 bg-brand-navy p-5 shadow-soft sm:p-6 w-full min-w-0 overflow-hidden">
+      <section data-tour-id="dashboard-training" className="rounded-[2rem] border border-white/10 bg-brand-navy p-5 shadow-soft sm:p-6 w-full min-w-0 overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-4 min-w-0">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-[.24em] text-brand-gold">Training</p>
             <h3 className="mt-2 text-2xl font-semibold text-white truncate">Admin tour</h3>
+            <p className="mt-2 text-sm text-slate-300">{completedCount} of {totalTours} section tours completed.</p>
           </div>
-          <button type="button" disabled className="rounded-full border border-brand-gold/30 px-5 py-3 text-sm font-bold text-brand-gold opacity-70 shrink-0">
-            Training coming soon
-          </button>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Link to="/help" className="rounded-full border border-brand-gold/30 px-5 py-3 text-sm font-bold text-brand-gold transition hover:bg-brand-gold hover:text-slate-950">
+              Open Help
+            </Link>
+            <button type="button" onClick={() => startTour('dashboard', { force: true })} className="rounded-full bg-brand-gold px-5 py-3 text-sm font-bold text-slate-950 transition hover:brightness-110">
+              Start tour
+            </button>
+          </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6 w-full min-w-0">
+      <section data-tour-id="dashboard-metrics" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6 w-full min-w-0">
         {metricCards.map((metric, index) => (
           <MetricCard
             key={metric.label}

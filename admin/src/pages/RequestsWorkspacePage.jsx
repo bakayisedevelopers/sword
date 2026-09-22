@@ -238,7 +238,7 @@ export default function RequestsWorkspacePage() {
           <section className="rounded-[1.6rem] border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100">{error}</section>
         ) : null}
 
-        <section className="flex justify-center">
+        <section data-tour-id="requests-tabs" className="flex justify-center">
           <div className="inline-flex rounded-full border border-white/10 bg-slate-950/60 p-1">
             <ToggleTab active={activeTab === 'new'} onClick={() => setActiveTab('new')}>New Requests</ToggleTab>
             <ToggleTab active={activeTab === 'all'} onClick={() => setActiveTab('all')}>All Requests</ToggleTab>
@@ -246,7 +246,7 @@ export default function RequestsWorkspacePage() {
         </section>
 
         <section className="space-y-5 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div data-tour-id="requests-filters" className="grid gap-4 md:grid-cols-3">
             <TextField label="Search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, phone, branch, type, or message" />
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Filter by branch</span>
@@ -266,7 +266,7 @@ export default function RequestsWorkspacePage() {
             ) : null}
           </div>
 
-          <div className="space-y-3">
+          <div data-tour-id="requests-list" className="space-y-3">
             {visibleRequests.map((request) => <RequestRow key={request.id} acknowledging={acknowledgingId === request.id} onAcknowledge={acknowledgeRequest} request={request} />)}
           </div>
 

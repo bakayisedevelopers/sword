@@ -7,6 +7,7 @@ import {
   onSnapshot,
   addDoc,
   updateDoc,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from './firebase.js';
 
@@ -140,6 +141,54 @@ export async function updateRecord(collectionName, docId, data = {}) {
   return await updateDoc(docRef, data);
 }
 
+/**
+ * Creates event registration records and decrements the event's available ticket count atomically.
+ *
+ * Existing admin/content code stores ticket availability in `ticketLimit`. When the
+ * first successful website registration decrements it, `originalTicketLimit` is
+ * preserved so the frontend can distinguish a sold-out event from an unlimited event.
+ */
+export async function createEventRegistrationsAndReduceTickets(eventId, quantity, registrations = []) {
+  const requestedQuantity = Number(quantity || registrations.length || 1);
+  if (!eventId || requestedQuantity <= 0) {
+    return await Promise.all(registrations.map((payload) => createRecord(COLLECTIONS.REGISTRATIONS, payload)));
+  }
+
+  const eventRef = getDocRef(COLLECTIONS.EVENTS, eventId);
+
+  return await runTransaction(db, async (transaction) => {
+    const eventSnap = await transaction.get(eventRef);
+    if (!eventSnap.exists()) {
+      throw new Error('Event could not be found.');
+    }
+
+    const eventData = eventSnap.data() || {};
+    const currentTicketLimit = Number(eventData.ticketLimit || 0);
+    const originalTicketLimit = Number(eventData.originalTicketLimit || 0);
+    const usesLimitedTickets = originalTicketLimit > 0 || currentTicketLimit > 0;
+
+    if (usesLimitedTickets) {
+      if (currentTicketLimit < requestedQuantity) {
+        throw new Error(`Sorry, only ${Math.max(0, currentTicketLimit)} seat(s) remain available for this event.`);
+      }
+
+      const nextTicketLimit = Math.max(0, currentTicketLimit - requestedQuantity);
+      transaction.update(eventRef, {
+        ticketLimit: nextTicketLimit,
+        originalTicketLimit: originalTicketLimit > 0 ? originalTicketLimit : currentTicketLimit,
+        updatedAt: new Date(),
+      });
+    }
+
+    const registrationRefs = registrations.map(() => doc(getCollectionRef(COLLECTIONS.REGISTRATIONS)));
+    registrationRefs.forEach((registrationRef, index) => {
+      transaction.set(registrationRef, registrations[index]);
+    });
+
+    return registrationRefs;
+  });
+}
+
 export default {
   COLLECTIONS,
   recordFromSnapshot,
@@ -152,4 +201,5 @@ export default {
   subscribeToDocument,
   createRecord,
   updateRecord,
+  createEventRegistrationsAndReduceTickets,
 };

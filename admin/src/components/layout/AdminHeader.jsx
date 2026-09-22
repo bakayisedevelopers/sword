@@ -49,7 +49,7 @@ export default function AdminHeader({ onMenuClick }) {
   const photoURL = profile?.photoURL || user?.photoURL || '';
 
   return (
-    <header className="relative z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
         <div className="flex items-center gap-3">
           <button
@@ -67,9 +67,19 @@ export default function AdminHeader({ onMenuClick }) {
           </div>
         </div>
         <div className="relative flex items-center gap-3">
+          <Link
+            to="/help"
+            className="hidden rounded-full border border-brand-gold/30 px-4 py-2 text-sm font-bold text-brand-gold transition hover:bg-brand-gold hover:text-slate-950 sm:inline-flex"
+          >
+            Help
+          </Link>
           <button
             type="button"
-            onClick={() => setNotificationsOpen((open) => !open)}
+            onClick={() => {
+              setNotificationsOpen((open) => !open);
+              window.dispatchEvent(new CustomEvent('admin-tour:start', { detail: { sectionKey: 'notifications' } }));
+            }}
+            data-tour-id="notifications-button"
             className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-slate-900 text-slate-200 transition hover:border-brand-gold hover:text-brand-gold"
             aria-label="Open notifications"
           >
@@ -85,7 +95,7 @@ export default function AdminHeader({ onMenuClick }) {
             {photoURL ? <img src={photoURL} alt={displayName || 'Admin profile'} className="h-full w-full object-cover" /> : displayInitials}
           </div>
           {notificationsOpen ? (
-            <section className="absolute right-0 top-14 z-[9999] w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-[1.6rem] border border-white/10 bg-slate-950 shadow-[0_30px_90px_rgba(0,0,0,0.65)]">
+            <section data-tour-id="notifications-panel" className="absolute right-0 top-14 z-[9999] w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-[1.6rem] border border-white/10 bg-slate-950 shadow-[0_30px_90px_rgba(0,0,0,0.65)]">
               <div className="border-b border-white/10 p-4">
                 <p className="text-xs uppercase tracking-[0.24em] text-brand-gold">Notifications</p>
                 <p className="mt-1 text-sm text-slate-300">{total ? `${total} items need attention` : 'No new items'}</p>

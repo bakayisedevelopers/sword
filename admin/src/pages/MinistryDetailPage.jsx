@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
 import { firestore } from '../lib/firebase';
 
 const ministryAccessRoles = ['super_admin', 'global_editor', 'branch_editor', 'ministry_editor'];
@@ -19,10 +20,18 @@ function ministryBranches(ministry) {
   return Array.isArray(ministry?.branches) ? ministry.branches.filter(Boolean) : [];
 }
 
+const typeOptions = [
+  { id: 'normal', label: 'Normal Ministry (Catering, Worship, etc.)' },
+  { id: 'special', label: 'Special Ministry (Youth, Singles, Couples, Kids)' },
+  { id: 'conference', label: 'Conference / Special Gathering (Fire Conf, Camp Yolo, etc.)' },
+];
+
 function buildDraft(ministry) {
   return {
     name: ministry?.name || '',
     ministryName: ministry?.ministryName || '',
+    slug: ministry?.slug || '',
+    type: ministry?.type || 'normal',
     description: ministry?.description || '',
     picture: ministry?.picture || '',
     FEWDS: ministry?.FEWDS || 'Fellowship',
@@ -117,6 +126,7 @@ function DetailItem({ label, value }) {
 
 export default function MinistryDetailPage() {
   const { ministryId } = useParams();
+  const navigate = useNavigate();
   const { user, roles, profile } = useAuth();
   const canAccessMinistries = roles.some((role) => ministryAccessRoles.includes(role));
   const canManageAll = roles.includes('super_admin') || roles.includes('global_editor');
@@ -125,6 +135,8 @@ export default function MinistryDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [ministry, setMinistry] = useState(null);
@@ -213,6 +225,12 @@ export default function MinistryDetailPage() {
       return;
     }
 
+    if (!draft.slug.trim()) {
+      setError('Enter a URL slug (e.g. for-couples, fire-conference) first.');
+      setMessage('');
+      return;
+    }
+
     if (!draft.description.trim()) {
       setError('Add a ministry description first.');
       setMessage('');
@@ -236,9 +254,14 @@ export default function MinistryDetailPage() {
     setMessage('');
 
     try {
+      const normalizedSlug = draft.slug.trim().toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const isGlobal = draft.branches.some((b) => `${b}`.trim().toLowerCase() === 'global');
       const payload = {
         name: draft.name.trim(),
         ministryName: draft.ministryName.trim() || draft.name.trim(),
+        slug: normalizedSlug,
+        type: draft.type || 'normal',
+        global: isGlobal,
         description: draft.description.trim(),
         picture: draft.picture.trim(),
         FEWDS: draft.FEWDS,
@@ -267,6 +290,19 @@ export default function MinistryDetailPage() {
     }
   }
 
+  async function handleDeleteMinistry() {
+    if (!ministry?.id || !canEdit) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(firestore, 'ministries', ministry.id));
+      navigate('/workspace/ministries', { replace: true });
+    } catch {
+      setError('The ministry could not be deleted right now. Check permissions.');
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  }
+
   if (!canAccessMinistries) {
     return <Navigate to="/access-denied" replace />;
   }
@@ -287,9 +323,20 @@ export default function MinistryDetailPage() {
             <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Ministries</p>
             <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">Ministry details</h1>
           </div>
-          <Link to="/workspace/ministries" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">
-            Back to ministries
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(true)}
+                className="rounded-full border border-red-500/30 px-5 py-3 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+              >
+                Delete ministry
+              </button>
+            )}
+            <Link to="/workspace/ministries" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">
+              Back to ministries
+            </Link>
+          </div>
         </section>
 
         {(error || message) && (
@@ -318,8 +365,19 @@ export default function MinistryDetailPage() {
             {canEdit ? (
               <form onSubmit={handleSave} className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <TextField label="Name" value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Ministry name" />
-                  <TextField label="Ministry name alias" value={draft.ministryName} onChange={(event) => setDraft((current) => ({ ...current, ministryName: event.target.value }))} placeholder="Optional alias" />
+                  <TextField label="Name" value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Ministry name" readOnly={!canEdit} />
+                  <TextField label="Ministry name alias" value={draft.ministryName} onChange={(event) => setDraft((current) => ({ ...current, ministryName: event.target.value }))} placeholder="Optional alias" readOnly={!canEdit} />
+                  <TextField label="URL Slug (Required, e.g. for-couples, fire-conference)" value={draft.slug} onChange={(event) => setDraft((current) => ({ ...current, slug: event.target.value }))} placeholder="e.g. for-couples" readOnly={!canEdit} />
+                  <label className="block space-y-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Ministry Category Type</span>
+                    <select
+                      value={draft.type}
+                      onChange={(event) => setDraft((current) => ({ ...current, type: event.target.value }))}
+                      className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-brand-gold/60 focus:bg-brand-gold/5"
+                    >
+                      {typeOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+                    </select>
+                  </label>
                   <TextField label="Picture URL" value={draft.picture} onChange={(event) => setDraft((current) => ({ ...current, picture: event.target.value }))} placeholder="Image URL" />
                   <label className="block space-y-2">
                     <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">FEWDS department</span>
@@ -338,6 +396,13 @@ export default function MinistryDetailPage() {
                 <section className="rounded-[1.6rem] border border-white/10 bg-slate-950/60 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Branches</p>
                   <div className="mt-3 flex flex-wrap gap-2">
+                    <TogglePill
+                      active={draft.branches.includes('Global')}
+                      disabled={!canManageAll}
+                      onClick={() => toggleDraftBranch('Global')}
+                    >
+                      🌐 Global (All Branches)
+                    </TogglePill>
                     {branches.map((branchDoc) => {
                       const label = branchLabel(branchDoc);
                       const normalizedLabel = label.trim().toLowerCase();
@@ -389,6 +454,7 @@ export default function MinistryDetailPage() {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   <DetailItem label="Name" value={ministry.name} />
+                  <DetailItem label="URL Slug" value={ministry.slug} />
                   <DetailItem label="Department" value={ministry.FEWDS} />
                   <DetailItem label="Branches" value={ministryBranches(ministry).join(', ')} />
                   <DetailItem label="Contact name" value={ministry.contactName} />
@@ -407,6 +473,16 @@ export default function MinistryDetailPage() {
           </>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        open={deleteOpen}
+        title="Delete ministry"
+        itemName={ministryName(ministry)}
+        message="Are you sure you want to delete this ministry? This will permanently remove its public page, leaders, and volunteer assignments."
+        loading={deleting}
+        onConfirm={handleDeleteMinistry}
+        onClose={() => setDeleteOpen(false)}
+      />
     </main>
   );
 }

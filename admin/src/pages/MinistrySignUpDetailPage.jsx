@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
 import ChoiceDropdown from '../components/ui/ChoiceDropdown';
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
 import { useAuth } from '../auth/AuthProvider';
 import { firestore } from '../lib/firebase';
 import { processMinistryVolunteerEnrollment } from '../lib/volunteerEnrollment';
@@ -137,6 +138,7 @@ function buildDraft(signUp) {
 
 export default function MinistrySignUpDetailPage() {
   const { signUpId } = useParams();
+  const navigate = useNavigate();
   const { user, roles, profile } = useAuth();
   const canAccessSignUps = roles.some((role) => signUpAccessRoles.includes(role));
   const canManageAll = roles.includes('super_admin') || roles.includes('global_editor');
@@ -145,6 +147,8 @@ export default function MinistrySignUpDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [signUp, setSignUp] = useState(null);
@@ -384,6 +388,19 @@ export default function MinistrySignUpDetailPage() {
     }
   }
 
+  async function handleDeleteSignUp() {
+    if (!signUp?.id) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(firestore, 'signUps', signUp.id));
+      navigate('/workspace/sign-ups', { replace: true });
+    } catch {
+      setError('The sign-up could not be deleted right now. Check permissions.');
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  }
+
   if (!canAccessSignUps) {
     return <Navigate to="/access-denied" replace />;
   }
@@ -404,9 +421,18 @@ export default function MinistrySignUpDetailPage() {
             <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Ministry SignUps</p>
             <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">Signup details</h1>
           </div>
-          <Link to="/workspace/sign-ups" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">
-            Back to SignUps
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="rounded-full border border-red-500/30 px-5 py-3 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+            >
+              Delete signup
+            </button>
+            <Link to="/workspace/sign-ups" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">
+              Back to SignUps
+            </Link>
+          </div>
         </section>
 
         {(error || message) && (
@@ -608,6 +634,16 @@ export default function MinistrySignUpDetailPage() {
           </>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        open={deleteOpen}
+        title="Delete ministry signup"
+        itemName={`${personName(signUp)} (${signUp?.type || 'Signup'})`}
+        message="Are you sure you want to delete this volunteer ministry signup document? This action is permanent and cannot be undone."
+        loading={deleting}
+        onConfirm={handleDeleteSignUp}
+        onClose={() => setDeleteOpen(false)}
+      />
     </main>
   );
 }

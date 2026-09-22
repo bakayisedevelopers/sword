@@ -16,6 +16,11 @@ const defaultContent = {
   yearThemeSubtitle: '',
   yearThemeDesktopImageUrl: '',
   yearThemeMobileImageUrl: '',
+  albumReleaseTitle: 'Atmosphere of Glory',
+  albumReleaseArtist: 'Sword Worship',
+  albumReleaseSpotifyUrl: '',
+  albumReleaseAppleMusicUrl: '',
+  albumReleaseYouTubeUrl: '',
 };
 
 function TextField({ label, value, onChange, placeholder, type = 'text', helper }) {
@@ -125,6 +130,10 @@ export default function WebsiteContentPage() {
     saveHomepageContent({ ...content }, 'Theme of the year saved to the homepage.', 'theme');
   }
 
+  function saveAlbumRelease() {
+    saveHomepageContent({ ...content }, 'Album release links saved to the homepage.', 'album');
+  }
+
   function saveAll() {
     saveHomepageContent({ ...content, latestSermonSource: content.latestSermonSource || 'manual' }, 'Website content saved.', 'all');
   }
@@ -157,7 +166,7 @@ export default function WebsiteContentPage() {
 
         <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,.85fr)]">
           <div className="min-w-0 space-y-6">
-            <section className="min-w-0 space-y-5 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
+            <section data-tour-id="website-content-sermon" className="min-w-0 space-y-5 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
               <SectionHeader eyebrow="Homepage sermon" title="Latest sermon display">
                 <button
                   type="button"
@@ -190,7 +199,7 @@ export default function WebsiteContentPage() {
               />
             </section>
 
-            <section className="min-w-0 space-y-5 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
+            <section data-tour-id="website-content-theme" className="min-w-0 space-y-5 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
               <SectionHeader eyebrow="Year theme" title="Theme of the year">
                 <button
                   type="button"
@@ -229,6 +238,53 @@ export default function WebsiteContentPage() {
                 helper="Leave empty to use the bundled Moving from Glory to Glory fallback image."
               />
             </section>
+
+            <section data-tour-id="website-content-album" className="min-w-0 space-y-5 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
+              <SectionHeader eyebrow="Album release" title="Streaming playlist links">
+                <button
+                  type="button"
+                  disabled={Boolean(saving) || loading}
+                  onClick={saveAlbumRelease}
+                  className="rounded-full bg-brand-gold px-4 py-2 text-sm font-bold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving === 'album' ? 'Saving…' : 'Save album links'}
+                </button>
+              </SectionHeader>
+
+              <TextField
+                label="Album title"
+                value={content.albumReleaseTitle}
+                onChange={(event) => setContent((current) => ({ ...current, albumReleaseTitle: event.target.value }))}
+                placeholder="Atmosphere of Glory"
+              />
+              <TextField
+                label="Artist / label"
+                value={content.albumReleaseArtist}
+                onChange={(event) => setContent((current) => ({ ...current, albumReleaseArtist: event.target.value }))}
+                placeholder="Sword Worship"
+              />
+              <TextField
+                label="Spotify playlist URL"
+                value={content.albumReleaseSpotifyUrl}
+                onChange={(event) => setContent((current) => ({ ...current, albumReleaseSpotifyUrl: event.target.value }))}
+                placeholder="https://open.spotify.com/playlist/..."
+                helper="If empty, Spotify controls and links are hidden on the public website."
+              />
+              <TextField
+                label="Apple Music playlist URL"
+                value={content.albumReleaseAppleMusicUrl}
+                onChange={(event) => setContent((current) => ({ ...current, albumReleaseAppleMusicUrl: event.target.value }))}
+                placeholder="https://music.apple.com/..."
+                helper="If empty, the Apple Music button is hidden on the public website."
+              />
+              <TextField
+                label="YouTube playlist URL"
+                value={content.albumReleaseYouTubeUrl}
+                onChange={(event) => setContent((current) => ({ ...current, albumReleaseYouTubeUrl: event.target.value }))}
+                placeholder="https://www.youtube.com/playlist?list=..."
+                helper="If empty, YouTube controls and links are hidden on the public website."
+              />
+            </section>
           </div>
 
           <aside className="min-w-0 space-y-6">
@@ -238,6 +294,9 @@ export default function WebsiteContentPage() {
                 <p className="break-all"><span className="text-slate-500">Sermon:</span> {content.latestSermonVideoUrl || 'Bundled sermon fallback'}</p>
                 <p className="break-all"><span className="text-slate-500">Desktop theme:</span> {content.yearThemeDesktopImageUrl || 'Bundled Moving from Glory to Glory fallback'}</p>
                 <p className="break-all"><span className="text-slate-500">Mobile theme:</span> {content.yearThemeMobileImageUrl || 'Bundled Moving from Glory to Glory fallback'}</p>
+                <p className="break-all"><span className="text-slate-500">Spotify album:</span> {content.albumReleaseSpotifyUrl || 'Hidden'}</p>
+                <p className="break-all"><span className="text-slate-500">Apple Music album:</span> {content.albumReleaseAppleMusicUrl || 'Hidden'}</p>
+                <p className="break-all"><span className="text-slate-500">YouTube album:</span> {content.albumReleaseYouTubeUrl || 'Hidden'}</p>
               </div>
             </section>
           </aside>

@@ -46,6 +46,7 @@ export default function SignInPage() {
   const [submitting, setSubmitting] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(false);
   const [eyebrow, title, description, submitLabel] = copy[mode];
+  const googleLabel = mode === 'signUp' ? 'Sign up with Google' : 'Sign in with Google';
 
   if (user && isAuthorized) return <Navigate to={location.state?.from || '/'} replace />;
   if (user && !isAuthorized) return <Navigate to="/access-denied" replace />;
@@ -164,7 +165,7 @@ export default function SignInPage() {
             {notice && <p className="auth-message auth-notice">{notice}</p>}
             <button disabled={submitting || checkingProfile} className="auth-submit" type="submit">{submitting || checkingProfile ? 'Please wait…' : submitLabel}</button>
           </form>
-          {mode !== 'reset' && mode !== 'activation' && <><div className="auth-divider">or continue with</div><button disabled={submitting} onClick={handleGoogleAuth} className="auth-google" type="button"><GoogleMark />Continue with Google</button>{mode === 'signIn' && <p className="auth-role-note">A new account needs an SSMI super administrator to grant its admin role before it can access the workspace.</p>}</>}
+          {mode !== 'reset' && mode !== 'activation' && <><div className="auth-divider">or continue with</div><button disabled={submitting} onClick={handleGoogleAuth} className="auth-google" type="button"><GoogleMark />{googleLabel}</button>{mode === 'signIn' && <p className="auth-role-note">A new account needs an SSMI super administrator to grant its admin role before it can access the workspace.</p>}</>}
         </div>
       </section>
     </main>

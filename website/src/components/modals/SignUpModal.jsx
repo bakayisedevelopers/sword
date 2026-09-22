@@ -18,24 +18,80 @@ const defaultBranches = [
  * SignUpModal reproducing SignUpWidget:
  * flutter-website/lib/bottom_sheets/sign_up/sign_up_widget.dart
  */
-export function SignUpModal({ isOpen, onClose, initialMinistry = '' }) {
+export function SignUpModal({
+  isOpen = true,
+  onClose,
+  initialMinistry = '',
+  defaultMinistry = '',
+  defaultBranch = '',
+  defaultDepartment = '',
+}) {
   const { data: branches = [] } = useFirestoreQuery(COLLECTIONS.BRANCHES);
+  const { data: dbMinistries = [] } = useFirestoreQuery(COLLECTIONS.MINISTRIES);
+
+  const targetMinistry = defaultMinistry || initialMinistry || 'General';
+  const targetBranch = defaultBranch || '-- Select Branch --';
 
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [email, setEmail] = useState('');
   const [cell, setCell] = useState('');
-  const [branch, setBranch] = useState('-- Select Branch --');
-  const [ministry, setMinistry] = useState(initialMinistry || 'General');
+  const [branch, setBranch] = useState(targetBranch);
+  const [ministry, setMinistry] = useState(targetMinistry);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   useEffect(() => {
-    if (initialMinistry) {
-      setMinistry(initialMinistry);
+    const min = defaultMinistry || initialMinistry;
+    if (min) {
+      setMinistry(min);
     }
-  }, [initialMinistry, isOpen]);
+    if (defaultBranch) {
+      setBranch(defaultBranch);
+    }
+  }, [defaultMinistry, initialMinistry, defaultBranch, isOpen]);
+
+  const ministryOptions = useMemo(() => {
+    const list = new Set();
+    if (defaultMinistry) list.add(defaultMinistry.trim());
+    if (initialMinistry) list.add(initialMinistry.trim());
+    if (dbMinistries && dbMinistries.length > 0) {
+      dbMinistries.forEach((m) => {
+        const mName = m.name || m.ministryName;
+        if (mName) list.add(mName.trim());
+      });
+    }
+    [
+      'Apostle Bheki Thwala Ministries',
+      'Pastor Zandi Thwala Ministries',
+      'Fire Conference',
+      'Superman Conference',
+      'Camp YOLO',
+      'Youth Ministry',
+      'Superkids',
+      'Couples',
+      'For Men',
+      'For Women',
+      'Singles Ministry',
+      'Young Adults',
+      'Worship Services',
+      'Media',
+      'Projection',
+      'Evangelism',
+      'School of Prophets',
+      'School of Ministry',
+      'Bible Study',
+      'Counseling Ministry',
+      'Fellowship Ministry',
+      'Baptism Ministry',
+      'Prayer Ministry',
+      'Welfare',
+      'Appreciations',
+    ].forEach((m) => list.add(m));
+
+    return Array.from(list).filter(Boolean).sort((a, b) => a.localeCompare(b));
+  }, [dbMinistries, defaultMinistry, initialMinistry]);
 
   const branchOptions = useMemo(() => {
     if (branches && branches.length > 0) {
@@ -49,26 +105,32 @@ export function SignUpModal({ isOpen, onClose, initialMinistry = '' }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !surname.trim() || !email.trim() || !cell.trim()) return;
+    const chosenMinistry = (ministry || targetMinistry || 'General').trim();
+    if (!name.trim() || !surname.trim() || !email.trim() || !cell.trim() || !chosenMinistry) return;
 
     setSubmitting(true);
     try {
+      // firestore.rules validSignUp strictly allows only ['name', 'surname', 'cell', 'branch', 'message', 'type', 'date']
+      const compiledMessage = [
+        `Ministry: ${chosenMinistry}`,
+        email.trim() ? `Email: ${email.trim()}` : '',
+        message.trim() ? `Notes: ${message.trim()}` : '',
+      ].filter(Boolean).join('\n');
+
       await createRecord(COLLECTIONS.SIGN_UPS, {
         name: name.trim(),
         surname: surname.trim(),
-        email: email.trim().toLowerCase(),
         cell: cell.trim(),
         branch: branch !== '-- Select Branch --' ? branch.trim() : '',
-        type: [ministry || 'General'],
-        message: message.trim(),
+        type: [chosenMinistry],
+        message: compiledMessage,
         date: new Date(),
-        status: 'pending',
       });
       setName('');
       setSurname('');
       setEmail('');
       setCell('');
-      setBranch('-- Select Branch --');
+      setBranch(targetBranch);
       setMessage('');
       setShowSuccessDialog(true);
     } catch (err) {
@@ -108,6 +170,28 @@ export function SignUpModal({ isOpen, onClose, initialMinistry = '' }) {
           </h3>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Selected Ministry *
+              </label>
+              <select
+                value={ministry}
+                onChange={(e) => setMinistry(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-sm rounded-[8px] border border-ff-secondary bg-white focus:outline-none focus:ring-1 focus:ring-ff-secondary text-ff-primary-text font-bold cursor-pointer"
+              >
+                <option value="" disabled>-- Select Ministry --</option>
+                {ministry && !ministryOptions.includes(ministry) && (
+                  <option value={ministry}>{ministry}</option>
+                )}
+                {ministryOptions.map((mName) => (
+                  <option key={mName} value={mName}>
+                    {mName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input
                 type="text"
@@ -146,18 +230,23 @@ export function SignUpModal({ isOpen, onClose, initialMinistry = '' }) {
               />
             </div>
 
-            <select
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-[8px] border border-ff-secondary bg-white focus:outline-none focus:ring-1 focus:ring-ff-secondary text-ff-primary-text"
-            >
-              <option value="-- Select Branch --">-- Select Branch --</option>
-              {branchOptions.map((branchName) => (
-                <option key={branchName} value={branchName}>
-                  {branchName}
-                </option>
-              ))}
-            </select>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Branch (Optional)
+              </label>
+              <select
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-[8px] border border-ff-secondary bg-white focus:outline-none focus:ring-1 focus:ring-ff-secondary text-ff-primary-text cursor-pointer"
+              >
+                <option value="-- Select Branch --">-- Select Branch --</option>
+                {branchOptions.map((branchName) => (
+                  <option key={branchName} value={branchName}>
+                    {branchName}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <textarea
               placeholder="Any additional information or comments"

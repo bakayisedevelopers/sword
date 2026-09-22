@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
 import { firestore } from '../lib/firebase';
 
 const mediaAccessRoles = ['super_admin', 'global_editor', 'branch_editor'];
@@ -108,12 +109,15 @@ function DetailItem({ label, value }) {
 
 export default function SermonDetailPage() {
   const { sourceType, mediaId } = useParams();
+  const navigate = useNavigate();
   const { user, roles, profile } = useAuth();
   const source = sourceConfig[sourceType];
   const canAccessMedia = roles.some((role) => mediaAccessRoles.includes(role));
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [item, setItem] = useState(null);
@@ -232,6 +236,19 @@ export default function SermonDetailPage() {
     }
   }
 
+  async function handleDeleteMedia() {
+    if (!item?.id || !source || !canEdit) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(firestore, source.collectionName, item.id));
+      navigate('/workspace/sermons', { replace: true });
+    } catch {
+      setError('The media item could not be deleted right now. Check permissions.');
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  }
+
   if (!canAccessMedia) {
     return <Navigate to="/access-denied" replace />;
   }
@@ -250,9 +267,20 @@ export default function SermonDetailPage() {
               <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{source.title}</p>
               <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">{loading ? 'Loading media…' : mediaTitle(item)}</h1>
             </div>
-            {!canEdit && item ? (
-              <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">View only</span>
-            ) : null}
+            <div className="flex flex-wrap items-center gap-3">
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteOpen(true)}
+                  className="rounded-full border border-red-500/30 px-5 py-2.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+                >
+                  Delete {sourceType === 'podcast' ? 'podcast' : 'sermon'}
+                </button>
+              )}
+              {!canEdit && item ? (
+                <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">View only</span>
+              ) : null}
+            </div>
           </div>
         </section>
 
@@ -321,6 +349,16 @@ export default function SermonDetailPage() {
           </>
         ) : null}
       </div>
+
+      <ConfirmDeleteModal
+        open={deleteOpen}
+        title={`Delete ${sourceType === 'podcast' ? 'podcast' : 'sermon'}`}
+        itemName={mediaTitle(item)}
+        message={`Are you sure you want to delete this ${sourceType === 'podcast' ? 'podcast episode' : 'sermon'}? This will remove it permanently from archives and member apps.`}
+        loading={deleting}
+        onConfirm={handleDeleteMedia}
+        onClose={() => setDeleteOpen(false)}
+      />
     </main>
   );
 }

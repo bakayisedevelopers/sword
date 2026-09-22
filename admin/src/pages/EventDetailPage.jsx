@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { GeoPoint, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
 import { firestore } from '../lib/firebase';
 
 const eventAccessRoles = ['super_admin', 'global_editor', 'branch_editor', 'ministry_editor'];
@@ -45,6 +46,8 @@ function dateTimeOrNull(value) {
 }
 
 function buildDraft(eventDoc) {
+  const pin = normalizeGeoPoint(eventDoc?.locationPIN);
+
   return {
     title: eventDoc?.title || '',
     description: eventDoc?.description || '',
@@ -56,7 +59,10 @@ function buildDraft(eventDoc) {
     branchId: '',
     location: eventDoc?.location || '',
     location_link: eventDoc?.location_link || '',
+    locationPinLat: pin.lat,
+    locationPinLng: pin.lng,
     price: eventDoc?.price === undefined || eventDoc?.price === null ? '' : `${eventDoc.price}`,
+    ticketLimit: eventDoc?.ticketLimit === undefined || eventDoc?.ticketLimit === null ? '' : `${eventDoc.ticketLimit}`,
     recurring: Boolean(eventDoc?.recurring),
     day: eventDoc?.day || '',
     branch_name: eventDoc?.branch_name || '',
@@ -77,6 +83,42 @@ function buildDraft(eventDoc) {
     recurrenceEnd: eventDoc?.recurrenceEnd || '',
     recurrenceDays: Array.isArray(eventDoc?.recurrenceDays) ? eventDoc.recurrenceDays : [],
   };
+}
+
+function normalizeGeoPoint(value) {
+  if (!value) {
+    return { lat: '', lng: '' };
+  }
+
+  if (value instanceof GeoPoint) {
+    return {
+      lat: value.latitude?.toString?.() || '',
+      lng: value.longitude?.toString?.() || '',
+    };
+  }
+
+  if (typeof value === 'object') {
+    const lat = value.latitude ?? value._latitude ?? '';
+    const lng = value.longitude ?? value._longitude ?? '';
+    if (lat !== '' || lng !== '') {
+      return {
+        lat: `${lat}`,
+        lng: `${lng}`,
+      };
+    }
+  }
+
+  return { lat: '', lng: '' };
+}
+
+function generatedMapUrl(lat, lng) {
+  if (!lat || !lng) return '';
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+}
+
+function openStreetMapUrl(lat, lng) {
+  if (!lat || !lng) return '';
+  return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(lat)}&mlon=${encodeURIComponent(lng)}#map=18/${encodeURIComponent(lat)}/${encodeURIComponent(lng)}`;
 }
 
 function canUserEditEvent(roles, profile, eventDoc) {
@@ -196,6 +238,7 @@ function SessionLabel({ session }) {
 
 export default function EventDetailPage() {
   const { eventId } = useParams();
+  const navigate = useNavigate();
   const { user, roles, profile } = useAuth();
   const canAccessEvents = roles.some((role) => eventAccessRoles.includes(role));
   const canManageAll = roles.includes('super_admin') || roles.includes('global_editor');
@@ -205,6 +248,8 @@ export default function EventDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [eventDoc, setEventDoc] = useState(null);
@@ -219,6 +264,7 @@ export default function EventDetailPage() {
   const [registrationSearch, setRegistrationSearch] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState('main');
   const [checkingRegistrationId, setCheckingRegistrationId] = useState('');
+  const [geocodingEvent, setGeocodingEvent] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -242,7 +288,8 @@ export default function EventDetailPage() {
 
         if (active) {
           const nextDraft = buildDraft(nextEvent);
-          const branchId = nextBranches.find((branchDoc) => branchMatchesScope(branchDoc, nextEvent?.branch_name))?.id || '';
+          const isGlobalEvent = Boolean(nextEvent?.global || nextEvent?.branch_name?.trim().toLowerCase() === 'global' || (Array.isArray(nextEvent?.branches) && nextEvent.branches.some((b) => `${b}`.trim().toLowerCase() === 'global')));
+          const branchId = isGlobalEvent ? 'global' : (nextBranches.find((branchDoc) => branchMatchesScope(branchDoc, nextEvent?.branch_name))?.id || '');
           const ministryId = nextMinistries.find((ministry) => ministry.ref?.path === nextEvent?.ministry?.path || ministry.name === nextEvent?.mininstryName || ministry.ministryName === nextEvent?.mininstryName)?.id || '';
           const contactPersonId = nextUsers.find((profileDoc) => profileDoc.ref?.path === nextEvent?.contactPerson?.path)?.id || '';
 
@@ -250,7 +297,7 @@ export default function EventDetailPage() {
           setBranches(nextBranches);
           setMinistries(nextMinistries);
           setUsers(nextUsers);
-          setDraft({ ...nextDraft, branchId, ministryId, contactPersonId });
+          setDraft({ ...nextDraft, branchId, ministryId, contactPersonId, global: isGlobalEvent });
         }
       } catch {
         if (active) {
@@ -356,6 +403,55 @@ export default function EventDetailPage() {
     }));
   }
 
+  async function handleFindCoordinates() {
+    if (!canEdit) return;
+
+    const address = `${draft.location || ''}`.trim();
+
+    if (!address) {
+      setError('Enter the event address first.');
+      setMessage('');
+      return;
+    }
+
+    setGeocodingEvent(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`);
+
+      if (!response.ok) {
+        throw new Error(`Nominatim returned ${response.status}`);
+      }
+
+      const results = await response.json();
+      const place = Array.isArray(results) ? results[0] : null;
+
+      if (!place?.lat || !place?.lon) {
+        setError('No map result was found for that event address. Try adding the city and country.');
+        return;
+      }
+
+      const lat = Number.parseFloat(place.lat).toFixed(6);
+      const lng = Number.parseFloat(place.lon).toFixed(6);
+
+      setDraft((current) => ({
+        ...current,
+        location: place.display_name || address,
+        locationPinLat: lat,
+        locationPinLng: lng,
+        location_link: generatedMapUrl(lat, lng),
+      }));
+      setMessage('Coordinates found from the event address. Review them before saving.');
+    } catch (err) {
+      console.error('Event address geocoding failed:', err);
+      setError('The event address could not be geocoded right now. Try again or enter coordinates manually.');
+    } finally {
+      setGeocodingEvent(false);
+    }
+  }
+
   async function handleSave(saveEvent) {
     saveEvent.preventDefault();
     if (!eventDoc || !canEdit) return;
@@ -386,6 +482,8 @@ export default function EventDetailPage() {
       const contactDoc = users.find((profileDoc) => profileDoc.id === scopedDraft.contactPersonId);
       const date = dateTimeOrNull(scopedDraft.date);
       const time = dateTimeOrNull(scopedDraft.time);
+      const locationPinLat = Number.parseFloat(scopedDraft.locationPinLat);
+      const locationPinLng = Number.parseFloat(scopedDraft.locationPinLng);
 
       const sanitizedSessions = scopedDraft.multiSession && Array.isArray(scopedDraft.sessions) && scopedDraft.sessions.length
         ? scopedDraft.sessions.map((session, index) => {
@@ -400,24 +498,35 @@ export default function EventDetailPage() {
           })
         : (date ? [{ id: 'main', title: 'Main session', startAt: time || date, endAt: null }] : []);
 
+      const isGlobal = Boolean(
+        scopedDraft.global ||
+        scopedDraft.branchId === 'global' ||
+        scopedDraft.branch_name?.trim().toLowerCase() === 'global' ||
+        (Array.isArray(scopedDraft.branches) && scopedDraft.branches.some((b) => `${b}`.trim().toLowerCase() === 'global'))
+      );
+      const branchesList = isGlobal
+        ? Array.from(new Set(['Global', ...(scopedDraft.branches || [])]))
+        : (scopedDraft.branches || []);
+
       const payload = {
         title: scopedDraft.title.trim(),
         description: scopedDraft.description.trim(),
         booking: scopedDraft.booking,
         picture: scopedDraft.picture.trim(),
-        global: scopedDraft.global,
+        global: isGlobal,
         location: scopedDraft.location.trim(),
         location_link: scopedDraft.location_link.trim(),
         price: Number.parseFloat(scopedDraft.price || '0') || 0,
+        ticketLimit: Number.parseInt(scopedDraft.ticketLimit || '0', 10) || 0,
         recurring: scopedDraft.recurring,
         day: scopedDraft.day,
-        branch_name: scopedDraft.branch_name.trim(),
+        branch_name: isGlobal ? 'Global' : scopedDraft.branch_name.trim(),
         repeat: scopedDraft.repeat,
         date_details: scopedDraft.date_details.trim(),
         time_details: scopedDraft.time_details.trim(),
         mininstryName: ministryNameValue,
         ministryName: ministryNameValue,
-        branches: scopedDraft.branches,
+        branches: branchesList,
         checkInEnabled: scopedDraft.checkInEnabled,
         checkOutEnabled: scopedDraft.checkOutEnabled,
         multiSession: scopedDraft.multiSession,
@@ -430,6 +539,9 @@ export default function EventDetailPage() {
 
       if (date) payload.date = date;
       if (time) payload.time = time;
+      if (Number.isFinite(locationPinLat) && Number.isFinite(locationPinLng)) {
+        payload.locationPIN = new GeoPoint(locationPinLat, locationPinLng);
+      }
       if (selectedBranch?.ref && canManageAll) payload.branch = selectedBranch.ref;
       if (ministryDoc?.ref) payload.ministry = ministryDoc.ref;
       if (contactDoc?.ref) payload.contactPerson = contactDoc.ref;
@@ -441,6 +553,19 @@ export default function EventDetailPage() {
       setError('The event could not be saved right now.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteEvent() {
+    if (!eventDoc?.id || !canEdit) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(firestore, 'events', eventDoc.id));
+      navigate('/workspace/events', { replace: true });
+    } catch {
+      setError('The event could not be deleted right now. Check permissions.');
+      setDeleting(false);
+      setDeleteOpen(false);
     }
   }
 
@@ -509,7 +634,18 @@ export default function EventDetailPage() {
             <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Events</p>
             <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">{loading ? 'Loading event…' : eventTitle(eventDoc)}</h1>
           </div>
-          <Link to="/workspace/events" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">Back to events</Link>
+          <div className="flex flex-wrap items-center gap-3">
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(true)}
+                className="rounded-full border border-red-500/30 px-5 py-3 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+              >
+                Delete event
+              </button>
+            )}
+            <Link to="/workspace/events" className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">Back to events</Link>
+          </div>
         </section>
 
         {(error || message) && (
@@ -550,9 +686,54 @@ export default function EventDetailPage() {
                 <TextField label="Event time" type="datetime-local" value={draft.time} onChange={(event) => setDraft((current) => ({ ...current, time: event.target.value }))} readOnly={!canEdit} />
                 <TextField label="Date details" value={draft.date_details} onChange={(event) => setDraft((current) => ({ ...current, date_details: event.target.value }))} readOnly={!canEdit} />
                 <TextField label="Time details" value={draft.time_details} onChange={(event) => setDraft((current) => ({ ...current, time_details: event.target.value }))} readOnly={!canEdit} />
-                <TextField label="Location" value={draft.location} onChange={(event) => setDraft((current) => ({ ...current, location: event.target.value }))} readOnly={!canEdit} />
-                <TextField label="Location link" value={draft.location_link} onChange={(event) => setDraft((current) => ({ ...current, location_link: event.target.value }))} readOnly={!canEdit} />
+                <div className="space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4 md:col-span-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Event location and map</p>
+                      <p className="mt-1 text-xs text-slate-400">Type the venue address, find coordinates, then save the generated map URL.</p>
+                    </div>
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        onClick={handleFindCoordinates}
+                        disabled={geocodingEvent}
+                        className="rounded-full border border-brand-gold/60 px-4 py-2 text-xs font-bold text-brand-gold transition hover:bg-brand-gold hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {geocodingEvent ? 'Finding...' : 'Find coordinates'}
+                      </button>
+                    ) : null}
+                  </div>
+                  <TextField label="Location" value={draft.location} onChange={(event) => setDraft((current) => ({ ...current, location: event.target.value }))} readOnly={!canEdit} />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <TextField label="Location pin lat" value={draft.locationPinLat} onChange={(event) => setDraft((current) => ({ ...current, locationPinLat: event.target.value, location_link: generatedMapUrl(event.target.value, current.locationPinLng) }))} readOnly={!canEdit} placeholder="Latitude" />
+                    <TextField label="Location pin lng" value={draft.locationPinLng} onChange={(event) => setDraft((current) => ({ ...current, locationPinLng: event.target.value, location_link: generatedMapUrl(current.locationPinLat, event.target.value) }))} readOnly={!canEdit} placeholder="Longitude" />
+                  </div>
+                  <TextField label="Location link" value={draft.location_link} onChange={(event) => setDraft((current) => ({ ...current, location_link: event.target.value }))} readOnly={!canEdit} placeholder="Generated Google Maps URL" />
+                  <div className="flex flex-wrap gap-3">
+                    {draft.locationPinLat && draft.locationPinLng && (
+                      <a
+                        href={openStreetMapUrl(draft.locationPinLat, draft.locationPinLng)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-brand-gold hover:text-white"
+                      >
+                        Preview on map
+                      </a>
+                    )}
+                    {draft.location_link && (
+                      <a
+                        href={draft.location_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-brand-gold hover:text-white"
+                      >
+                        Open saved URL
+                      </a>
+                    )}
+                  </div>
+                </div>
                 <TextField label="Price" type="number" value={draft.price} onChange={(event) => setDraft((current) => ({ ...current, price: event.target.value }))} readOnly={!canEdit} />
+                <TextField label="Seat capacity / Ticket limit" type="number" value={draft.ticketLimit} onChange={(event) => setDraft((current) => ({ ...current, ticketLimit: event.target.value }))} readOnly={!canEdit} placeholder="0 = unlimited" />
                 <label className="block space-y-2">
                   <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Day</span>
                   <select disabled={!canEdit} value={draft.day} onChange={(event) => setDraft((current) => ({ ...current, day: event.target.value }))} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-brand-gold/60 focus:bg-brand-gold/5 disabled:opacity-70">
@@ -683,10 +864,20 @@ export default function EventDetailPage() {
                 <label className="block space-y-2">
                   <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Primary branch</span>
                   <select disabled={!canEdit || !canManageAll} value={draft.branchId} onChange={(event) => {
+                    if (event.target.value === 'global') {
+                      setDraft((current) => ({
+                        ...current,
+                        branchId: 'global',
+                        branch_name: 'Global',
+                        branches: current.branches.includes('Global') ? current.branches : ['Global', ...current.branches],
+                      }));
+                      return;
+                    }
                     const branchDoc = branches.find((branch) => branch.id === event.target.value);
                     setDraft((current) => ({ ...current, branchId: event.target.value, branch_name: branchDoc ? branchLabel(branchDoc) : '' }));
                   }} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-brand-gold/60 focus:bg-brand-gold/5 disabled:opacity-70">
                     <option value="">No branch selected</option>
+                    <option value="global">🌐 Global (All Branches)</option>
                     {branches.map((branchDoc) => <option key={branchDoc.id} value={branchDoc.id}>{branchLabel(branchDoc)}</option>)}
                   </select>
                 </label>
@@ -713,6 +904,13 @@ export default function EventDetailPage() {
               <section className="rounded-[1.6rem] border border-white/10 bg-slate-950/60 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Registration branches</p>
                 <div className="mt-3 flex flex-wrap gap-2">
+                  <TogglePill
+                    active={draft.branches.includes('Global')}
+                    disabled={!canEdit || !canManageAll}
+                    onClick={() => toggleDraftBranch('Global')}
+                  >
+                    🌐 Global (All Branches)
+                  </TogglePill>
                   {branches.map((branchDoc) => {
                     const label = branchLabel(branchDoc);
                     const normalizedLabel = label.trim().toLowerCase();
@@ -844,6 +1042,16 @@ export default function EventDetailPage() {
           </>
         ) : null}
       </div>
+
+      <ConfirmDeleteModal
+        open={deleteOpen}
+        title="Delete event"
+        itemName={eventTitle(eventDoc)}
+        message="Are you sure you want to delete this event? This will permanently remove its schedule, booking options, and check-in sessions."
+        loading={deleting}
+        onConfirm={handleDeleteEvent}
+        onClose={() => setDeleteOpen(false)}
+      />
     </main>
   );
 }

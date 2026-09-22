@@ -5,6 +5,15 @@ import { useAuth } from '../auth/AuthProvider';
 import { adminRoles, ministryRoleLabel, ministryRoleOptions, roleLabel } from '../auth/roles';
 import ChoiceDropdown from '../components/ui/ChoiceDropdown';
 import { firebaseAuth, firestore } from '../lib/firebase';
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  NOTIFICATION_CATEGORIES,
+  getBrowserNotificationPermission,
+  getLocalPreferences,
+  isBrowserNotificationSupported,
+  requestBrowserNotificationPermission,
+  setLocalPreferences,
+} from '../services/notificationService';
 
 function TextField({ label, value, onChange, placeholder, readOnly = false, type = 'text' }) {
   return (
@@ -45,6 +54,27 @@ export default function ProfilePage() {
   const [requestBranch, setRequestBranch] = useState('');
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [requestReason, setRequestReason] = useState('');
+
+  const [notificationPreferences, setNotificationPreferences] = useState(() => ({
+    ...DEFAULT_NOTIFICATION_PREFERENCES,
+    ...getLocalPreferences(user?.uid),
+    ...(profile?.notificationPreferences || {}),
+  }));
+  const [browserPermission, setBrowserPermission] = useState(() => getBrowserNotificationPermission());
+  const [savingPreferences, setSavingPreferences] = useState(false);
+  const [prefMessage, setPrefMessage] = useState('');
+  const [prefError, setPrefError] = useState('');
+
+  useEffect(() => {
+    if (user?.uid) {
+      setNotificationPreferences({
+        ...DEFAULT_NOTIFICATION_PREFERENCES,
+        ...getLocalPreferences(user.uid),
+        ...(profile?.notificationPreferences || {}),
+      });
+      setBrowserPermission(getBrowserNotificationPermission());
+    }
+  }, [user?.uid, profile?.notificationPreferences]);
 
   const savedBranch = profile?.branch || user?.branch || '';
 
@@ -171,6 +201,66 @@ export default function ProfilePage() {
     ));
   }
 
+  function togglePrefCategory(key) {
+    setNotificationPreferences((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  }
+
+  async function handleToggleBrowserPush() {
+    if (!isBrowserNotificationSupported()) {
+      setPrefError('Browser notifications are not supported in this browser.');
+      return;
+    }
+
+    if (notificationPreferences.browserNotifications) {
+      setNotificationPreferences((current) => ({
+        ...current,
+        browserNotifications: false,
+      }));
+      return;
+    }
+
+    const permission = await requestBrowserNotificationPermission();
+    setBrowserPermission(permission);
+    if (permission === 'granted') {
+      setNotificationPreferences((current) => ({
+        ...current,
+        browserNotifications: true,
+      }));
+      setPrefMessage('Browser notifications enabled.');
+    } else {
+      setPrefError('Browser notification permission was not granted. Check your browser settings.');
+    }
+  }
+
+  async function handleSavePreferences(event) {
+    event.preventDefault();
+    if (!user?.uid) return;
+
+    setSavingPreferences(true);
+    setPrefMessage('');
+    setPrefError('');
+
+    try {
+      await setDoc(
+        doc(firestore, 'users', user.uid),
+        {
+          notificationPreferences,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+      setLocalPreferences(user.uid, notificationPreferences);
+      setPrefMessage('Notification preferences saved.');
+    } catch {
+      setPrefError('Could not save notification preferences right now. Please try again.');
+    } finally {
+      setSavingPreferences(false);
+    }
+  }
+
   return (
     <main className="space-y-5 pb-6 lg:pr-1 lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden">
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-8">
@@ -188,7 +278,7 @@ export default function ProfilePage() {
       )}
 
       <section className="grid gap-5 xl:grid-cols-[1.05fr_.95fr]">
-        <form onSubmit={handleSaveProfile} className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-soft sm:p-6">
+        <form data-tour-id="profile-details" onSubmit={handleSaveProfile} className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-soft sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Profile details</p>
@@ -286,7 +376,7 @@ export default function ProfilePage() {
         </section>
       </section>
 
-      <form onSubmit={handleRequestSubmit} className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
+      <form data-tour-id="profile-access-request" onSubmit={handleRequestSubmit} className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Access requests</p>
@@ -343,6 +433,112 @@ export default function ProfilePage() {
             className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-brand-gold hover:text-brand-gold disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submittingRequest ? 'Submitting…' : 'Send request'}
+          </button>
+        </div>
+      </form>
+
+      {/* Notifications Preferences */}
+      <form data-tour-id="profile-notification-preferences" onSubmit={handleSavePreferences} className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-soft sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Settings</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">Notifications Preferences</h2>
+            <p className="mt-1 text-sm text-slate-300">
+              Customize which activities notify you in the admin app and enable browser push alerts.
+            </p>
+          </div>
+          <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">
+            {Object.values(notificationPreferences).filter(Boolean).length} enabled
+          </span>
+        </div>
+
+        {(prefError || prefMessage) && (
+          <div className={`mt-4 rounded-[1.25rem] border p-3.5 text-sm ${prefError ? 'border-red-400/30 bg-red-500/10 text-red-100' : 'border-brand-gold/20 bg-brand-gold/10 text-brand-gold'}`}>
+            {prefError || prefMessage}
+          </div>
+        )}
+
+        {/* Browser Notifications Controller */}
+        <div className="mt-6 rounded-[1.6rem] border border-white/10 bg-slate-950/60 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-white">Desktop & Browser Notifications</h3>
+                <span className={`rounded-full px-2.5 py-0.5 text-[0.68rem] font-bold uppercase tracking-wider ${
+                  browserPermission === 'granted'
+                    ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                    : browserPermission === 'denied'
+                    ? 'border border-red-500/30 bg-red-500/10 text-red-400'
+                    : 'border border-amber-500/30 bg-amber-500/10 text-amber-300'
+                }`}>
+                  {browserPermission}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-400">
+                Receive instant pop-up notifications on your desktop or device when new records or updates arrive.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleBrowserPush}
+              className={`rounded-full px-4 py-2 text-xs font-bold transition ${
+                notificationPreferences.browserNotifications
+                  ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
+                  : 'border border-white/15 bg-white/5 text-slate-200 hover:border-brand-gold hover:text-brand-gold'
+              }`}
+            >
+              {notificationPreferences.browserNotifications ? '✓ Enabled' : 'Enable browser alerts'}
+            </button>
+          </div>
+        </div>
+
+        {/* Category Toggles Grid */}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {NOTIFICATION_CATEGORIES.map((category) => {
+            const isEnabled = notificationPreferences[category.key] !== false;
+            return (
+              <div
+                key={category.key}
+                onClick={() => togglePrefCategory(category.key)}
+                className={`flex cursor-pointer items-center justify-between gap-3 rounded-[1.4rem] border p-4 transition ${
+                  isEnabled
+                    ? 'border-brand-gold/30 bg-brand-gold/5'
+                    : 'border-white/5 bg-slate-950/40 opacity-70 hover:opacity-100'
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-white">{category.label}</p>
+                  <p className="mt-0.5 text-xs text-slate-400 line-clamp-2">{category.description}</p>
+                </div>
+                <button
+                  type="button"
+                  aria-pressed={isEnabled}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    isEnabled ? 'bg-brand-gold' : 'bg-slate-700'
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-slate-950 shadow ring-0 transition duration-200 ease-in-out ${
+                      isEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-slate-400">
+            Preferences directly control your admin header alerts, sidebar badges, and browser push alerts.
+          </p>
+          <button
+            type="submit"
+            disabled={savingPreferences}
+            className="rounded-full bg-brand-gold px-6 py-3 text-sm font-bold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {savingPreferences ? 'Saving…' : 'Save notification preferences'}
           </button>
         </div>
       </form>

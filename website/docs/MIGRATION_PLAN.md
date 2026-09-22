@@ -1,5 +1,7 @@
 # Flutter to React/Vite/Tailwind Migration Plan
 
+> Historical note: this document records the original Flutter-to-React migration plan. The `flutter-website/` folder has now been removed from the repository, and the React app in `website/` is the active source of truth for public website development. New developers should start with `README.md`, `docs/PROJECT_HANDOFF.md`, `website/README.md`, and `website/docs/DEVELOPER_GUIDE.md`.
+
 ## Migration Status
 
 Current Phase: Phase 6 - BranchTemplate Fidelity Correction

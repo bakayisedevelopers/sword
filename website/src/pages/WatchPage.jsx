@@ -21,6 +21,20 @@ export function WatchPage() {
     orderBy: { field: 'date', direction: 'desc' },
   });
 
+  const BRANCH_OPTIONS = [
+    'All',
+    'EMalahleni',
+    'Online',
+    'Boksburg',
+    'Siteki',
+    'Hlutsi',
+    'Ludzeludze',
+    'Mbabane',
+    'Lagos',
+    'Orange Farm',
+  ];
+
+  const [selectedBranch, setSelectedBranch] = useState('EMalahleni');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVideoUrl, setSelectedVideoUrl] = useState('');
 
@@ -49,16 +63,23 @@ export function WatchPage() {
     return parseDate(b.date) - parseDate(a.date);
   });
 
-  // Default video if none selected
-  const firstSermonVideo =
-    sermons?.[0]?.videoLink ||
-    sermons?.[0]?.videoUrl ||
-    sermons?.[0]?.video ||
-    sermons?.[0]?.link ||
-    'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-  const activeVideoUrl = selectedVideoUrl || firstSermonVideo;
-
   const filteredSermons = sermons.filter((s) => {
+    // Branch filter:
+    if (selectedBranch !== 'All') {
+      const bName = (s.branchName || s.branch_name || '').trim().toLowerCase();
+      if (selectedBranch.toLowerCase() === 'online') {
+        // Online inherits EMalahleni sermons
+        if (bName !== 'online' && bName !== 'emalahleni' && bName !== 'e-malahleni') {
+          return false;
+        }
+      } else {
+        const target = selectedBranch.trim().toLowerCase();
+        if (bName !== target) {
+          return false;
+        }
+      }
+    }
+
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     const title = (s.Title || s.title || '').toLowerCase();
@@ -66,6 +87,17 @@ export function WatchPage() {
     const preacher = (s.preacher || '').toLowerCase();
     return title.includes(q) || description.includes(q) || preacher.includes(q);
   });
+
+  // Default video if none selected
+  const firstSermonVideo =
+    filteredSermons?.[0]?.videoLink ||
+    filteredSermons?.[0]?.videoUrl ||
+    filteredSermons?.[0]?.video ||
+    filteredSermons?.[0]?.link ||
+    sermons?.[0]?.videoLink ||
+    sermons?.[0]?.videoUrl ||
+    'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+  const activeVideoUrl = selectedVideoUrl || firstSermonVideo;
 
   const handleSermonSelect = (sermon) => {
     const link = sermon.videoLink || sermon.videoUrl || sermon.video || sermon.link;
@@ -119,11 +151,9 @@ export function WatchPage() {
 
             <button
               type="button"
-              onClick={() => console.log('My Dashboard clicked')}
+              onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
               className="h-10 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-base font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-            >
-              My Dashboard
-            </button>
+            >Discipleship</button>
           </div>
         </div>
       </div>
@@ -154,11 +184,9 @@ export function WatchPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => console.log('Dashboard clicked')}
+                onClick={() => window.open('https://disciple.swordandspirit.org', '_blank', 'noopener,noreferrer')}
                 className="h-9 px-4 rounded-[50px] bg-ff-primary text-ff-primary-text text-sm font-bold border border-ff-primary hover:bg-white/90 transition-colors"
-              >
-                Dashboard
-              </button>
+              >Discipleship</button>
               <button
                 type="button"
                 onClick={toggleDrawer}
@@ -221,16 +249,37 @@ export function WatchPage() {
 
       {/* 4. ALL OUR SERMONS & SEARCH */}
       <section className="w-[90%] max-w-[1440px] mx-auto my-6 flex flex-col gap-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
-          <h2 className="text-2xl sm:text-3xl font-bold text-ff-secondary">
-            All Our Sermons
-          </h2>
-          <div className="w-full sm:w-80">
-            <Input
-              placeholder="Search sermons..."
-              value={searchQuery}
-              onChange={setSearchQuery}
-            />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-ff-secondary">
+              All Our Sermons
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Filtering by campus: <strong className="text-ff-secondary font-bold">{selectedBranch === 'All' ? 'All Branches' : selectedBranch}</strong>
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* Campus Branch Filter Dropdown */}
+            <div className="relative min-w-[200px]">
+              <select
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+                className="w-full h-11 px-4 pr-9 rounded-xl border border-ff-secondary/40 bg-white text-sm font-semibold text-ff-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer shadow-sm"
+              >
+                {BRANCH_OPTIONS.map((b) => (
+                  <option key={b} value={b}>
+                    {b === 'All' ? '🌐 All Branches' : b}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="w-full sm:w-80">
+              <Input
+                placeholder="Search sermons..."
+                value={searchQuery}
+                onChange={setSearchQuery}
+              />
+            </div>
           </div>
         </div>
 
@@ -284,8 +333,19 @@ export function WatchPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 text-slate-500">
-            No sermons found matching your query.
+          <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-8 text-center my-4">
+            <p className="text-base font-semibold text-ff-secondary">No sermons found for {selectedBranch}.</p>
+            <p className="text-xs text-slate-500 mt-1">Try selecting another branch or clearing your search term.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedBranch('All');
+                setSearchQuery('');
+              }}
+              className="mt-3 px-5 py-2 rounded-full bg-ff-secondary text-white text-xs font-bold hover:bg-slate-800 transition shadow-sm"
+            >
+              Show All Branches
+            </button>
           </div>
         )}
       </section>
