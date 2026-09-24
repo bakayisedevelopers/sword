@@ -13,3 +13,6 @@ cloud-functions/.runtimeconfig.json
 .firebase/
 scratch_*
 preview-home*.png
+
+# Deprecated local Flutter reference; do not commit it.
+flutter-website/
